@@ -9,7 +9,7 @@ public final class ItemManager extends JavaPlugin {
     
     @Override
     public void onEnable() {
-
+        api = new ItemManagerApi(this);
     }
 
     public void onReload() {

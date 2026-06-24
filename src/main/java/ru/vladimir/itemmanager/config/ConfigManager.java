@@ -4,8 +4,8 @@ import org.jetbrains.annotations.NotNull;
 
 import ru.vladimir.itemmanager.utils.Logger;
 
-// TODO: Implement Reading from and Writing to both Config and Messages.
 public final class ConfigManager {
+
     private static ConfigManager instance;
     private Config config;
     private Messages messages;
@@ -19,6 +19,9 @@ public final class ConfigManager {
         }
 
         instance = new ConfigManager();
+
+        instance.config = instance.readConfig();
+        instance.messages = instance.readMessages();
 
         Logger.debug(instance, "Initialized successfully.");
     }
@@ -34,7 +37,17 @@ public final class ConfigManager {
         Logger.debug(ConfigManager.class, "Destroyed successfully.");
     }
 
-    public static @NotNull ConfigManager get() {
+    private Config readConfig() {
+        // Here we read config.
+        return null;
+    }
+
+    private Messages readMessages() {
+        // Here we read messages.
+        return null;
+    }
+
+    public static @NotNull ConfigManager getInstance() {
         if (instance == null)
             throw new IllegalStateException("Attempted to get instance before it was initialized.");
         return instance;
