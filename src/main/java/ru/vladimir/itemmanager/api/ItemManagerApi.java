@@ -1,6 +1,5 @@
 package ru.vladimir.itemmanager.api;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -9,26 +8,42 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
 import ru.vladimir.itemmanager.ItemManager;
-import ru.vladimir.itemmanager.storage.CustomItem;
+import ru.vladimir.itemmanager.storage.CustomItemBuilder;
+import ru.vladimir.itemmanager.storage.CustomItemStorage;
 
 public final class ItemManagerApi {
-    private final ItemManager plugin;
 
-    public ItemManagerApi(@NotNull ItemManager plugin) {
+    private final ItemManager plugin;
+    private final CustomItemStorage itemStorage;
+    private final CustomItemBuilder itemBuilder;
+
+    public ItemManagerApi(@NotNull ItemManager plugin, @NotNull CustomItemStorage itemStorage, @NotNull CustomItemBuilder itemBuilder) {
         this.plugin = plugin;
+        this.itemStorage = itemStorage;
+        this.itemBuilder = itemBuilder;
     }
     
     public void reloadConfig() {
         plugin.onReload();
     }
 
-    public boolean registerCustomItem(@NotNull String itemId, @NotNull ItemStack itemStack) {}
-    public boolean registerCustomItem(@NotNull String itemId, byte @NotNull [] itemData) {}
-    public boolean unregisterCustomItem(@NotNull String itemId) {}
-    public boolean isCustomItem(@NotNull String itemId) {}
-    public @NotNull Optional<CustomItem> getCustomItem(@NotNull String itemId) {}
-    public @NotNull Optional<ItemStack> getCustomItemAsItemStack(@NotNull String itemId) {}
-    public @NotNull Optional<Byte> getCustomItemAsByte(@NotNull String itemId) {}
-    public @NotNull @Unmodifiable Set<String> getAllCustomItemIds() {}
-    public @NotNull @Unmodifiable Map<String, Byte> getAllCustomItemsAsBytes() {}
+    public boolean registerCustomItem(@NotNull String itemId, @NotNull ItemStack item) {
+        return itemStorage.registerCustomItem(itemId, item);
+    }
+
+    public boolean unregisterCustomItem(@NotNull String itemId) {
+        return itemStorage.unregisterCustomItem(itemId);
+    }
+    
+    public boolean isCustomItem(@NotNull String itemId) {
+        return itemStorage.isCustomItem(itemId);
+    }
+    
+    public @NotNull Optional<ItemStack> getCustomItem(@NotNull String itemId) {
+        return itemBuilder.build(itemId);
+    }
+    
+    public @NotNull @Unmodifiable Set<String> getAllCustomItemIds() {
+        return itemStorage.getCustomItemIds();
+    }
 }

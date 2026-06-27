@@ -1,51 +1,61 @@
 package ru.vladimir.itemmanager.storage;
 
+import java.io.File;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import ru.vladimir.itemmanager.utils.Logger;
+import ru.vladimir.itemmanager.ItemManager;
 
 public final class CustomItemStorage {
-    private static CustomItemStorage instance;
-    private Map<String, Byte> customItemRegistry;
+    private final Map<String, byte[]> itemRegistry;
 
-    public static void init() {
-        if (instance != null) {
-            Logger.warn(instance, "Attempted to initialize an instance while it is already initialized.");
-            return;
-        }
-
-        instance = new CustomItemStorage();
-        instance.customItemRegistry = new ConcurrentHashMap<>();
-
-        Logger.debug(instance, "Initialized successfully.");
+    public CustomItemStorage(@NotNull ItemManager plugin) {
+        itemRegistry = readUserStorage(YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "items.yml")));
     }
 
-    public static void destroy() {
-        if (instance == null) {
-            Logger.warn(CustomItemStorage.class, "Attempted to destroy an instance while there is none.");
-            return;
-        }
-
-        instance = null;
-
-        Logger.debug(CustomItemStorage.class, "Destroyed successfully.");
+    private Map<String, byte[]> readUserStorage(FileConfiguration config) {
+        // Do something.
+        return Map.of();
     }
 
-    public static @NotNull CustomItemStorage getInstance() {
-        if (instance == null)
-            throw new IllegalStateException("Attempted to get instance before it was initialized.");
-        return instance;
+    private void appendItemToUserStorage(String id, ItemStack item) {
+
     }
 
-    // todo
-    public static void registerCustomItem(@NotNull String id, @NotNull Byte data) {
-        instance.customItemRegistry.put(id, data);
+    private void removeItemFromUserStorage(String id) {
+
     }
 
-    public static boolean isCustomItem(@NotNull String id) {
-        return instance.customItemRegistry.containsKey(id);
+    private void writePluginStorage() {
+
+    }
+
+    public boolean registerCustomItem(@NotNull String id, @NotNull ItemStack item) {
+        if (isCustomItem(id)) return false;
+        appendItemToUserStorage(id, item);
+        itemRegistry.put(id, item.serializeAsBytes());
+        writePluginStorage();
+        return true;
+    }
+
+    public boolean unregisterCustomItem(@NotNull String id) {
+        if (!isCustomItem(id)) return false;
+        removeItemFromUserStorage(id);
+        itemRegistry.remove(id);
+        writePluginStorage();
+        return true;
+    }
+
+    public boolean isCustomItem(@NotNull String id) {
+        return itemRegistry.containsKey(id);
+    }
+
+    public Set<String> getCustomItemIds() {
+        return Set.copyOf(itemRegistry.keySet());
     }
 }

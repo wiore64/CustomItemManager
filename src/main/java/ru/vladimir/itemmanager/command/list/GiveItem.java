@@ -33,7 +33,7 @@ public class GiveItem implements SubCommand {
         }
 
         final String itemName = args[2];
-        final Optional<ItemStack> optionalItem = ItemManager.getApi().getCustomItemAsItemStack(itemName);
+        final Optional<ItemStack> optionalItem = ItemManager.getApi().getCustomItem(itemName);
 
         if (optionalItem.isEmpty()) {
             Messager.sendMessage(sender, ConfigManager.getInstance().getMessages().itemNotFound(), Map.of("ITEM", itemName));

@@ -8,6 +8,8 @@ import ru.vladimir.itemmanager.api.ItemManagerApi;
 import ru.vladimir.itemmanager.command.CommandService;
 import ru.vladimir.itemmanager.command.ItemManagerCommand;
 import ru.vladimir.itemmanager.config.ConfigManager;
+import ru.vladimir.itemmanager.storage.CustomItemBuilder;
+import ru.vladimir.itemmanager.storage.CustomItemStorage;
 
 public final class ItemManager extends JavaPlugin {
     
@@ -17,9 +19,14 @@ public final class ItemManager extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        api = new ItemManagerApi(this);
 
         ConfigManager.init(this);
+
+        final CustomItemStorage itemStorage = new CustomItemStorage(this);
+        final CustomItemBuilder itemBuilder = new CustomItemBuilder(itemStorage);
+
+        api = new ItemManagerApi(this, itemStorage, itemBuilder);
+
         CommandService.init();
 
         final PluginCommand command = this.getCommand("itemmanager");
@@ -38,8 +45,8 @@ public final class ItemManager extends JavaPlugin {
     @Override
     public void onDisable() {
         CommandService.destroy();
-        ConfigManager.destroy();
         api = null;
+        ConfigManager.destroy();
         instance = null;
     }
 

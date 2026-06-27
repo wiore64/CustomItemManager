@@ -37,7 +37,7 @@ public class AddItem implements SubCommand {
 
         final String itemName = args[1];
 
-        final boolean success = ItemManager.getApi().registerCustomItem(itemName, item.serializeAsBytes());
+        final boolean success = ItemManager.getApi().registerCustomItem(itemName, item);
 
         if (success) {
             Messager.sendMessage(sender, ConfigManager.getInstance().getMessages().itemRegistered(), Map.of("ITEM", itemName));
