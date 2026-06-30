@@ -1,4 +1,6 @@
+#file: noinspection SpellCheckingInspection
 name: ItemManager
+api-version: 1.21
 version: ${version}
 main: ru.vladimir.itemmanager.ItemManager
 description: A fascinating plugin!
@@ -18,6 +20,12 @@ permissions:
     default: op
     children:
       itemmanager.command: true
+      itemmanager.command.add: true
+      itemmanager.command.remove: true
+      itemmanager.command.give: true
+      itemmanager.command.list: true
+      itemmanager.command.reload: true
+      itemmanager.command.help: true
 
   itemmanager.command:
     description: Allows the use of the /itemmanager command.

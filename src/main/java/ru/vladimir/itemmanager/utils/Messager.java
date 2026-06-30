@@ -18,7 +18,7 @@ public final class Messager {
 
     public static void sendMessage(@NotNull CommandSender sender, @NotNull String message, @NotNull Map<String, String> params) {
         for (final var entry : params.entrySet()) {
-            message = message.replaceAll("{" + entry.getKey() + "}", entry.getValue());
+            message = message.replace("{" + entry.getKey() + "}", entry.getValue());
         }
 
         sender.sendMessage(MINI_MESSAGE_PARSER.deserialize(message));

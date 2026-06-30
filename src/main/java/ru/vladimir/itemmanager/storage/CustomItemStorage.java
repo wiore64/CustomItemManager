@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
@@ -47,6 +48,11 @@ public final class CustomItemStorage {
     public CustomItemStorage(@NotNull ItemManager plugin) {
         this.plugin = plugin;
         this.itemRegistry = new ConcurrentHashMap<>();
+
+        if (!new File(plugin.getDataFolder(), "items.yml").exists()) {
+            Logger.info(this, "items.yml not found. Creating a new one...");
+            plugin.saveResource("items.yml", false);
+        }
 
         refreshItemRegistry(getItemConfigFile(), getItemConfig());
     }
@@ -194,28 +200,19 @@ public final class CustomItemStorage {
             return null;
         }
 
-        if (rawLore.size() > 256) {
-            Logger.warn(this, "Lore of '%s' exceeds the line limit (256). Extra lines will be truncated.");
+        final List<Component> lore = new ArrayList<>();
 
-            for (int lineCount = 256; lineCount < rawLore.size(); lineCount++) {
-                rawLore.remove(lineCount);
-            } 
-        }
-
-        final Component[] lore = new Component[256]; // 256 is max lines an item lore can have in the game.
-
-        for (short lineCount = 0; lineCount < rawLore.size(); lineCount++) {
-            final Object rawSupposedLine = rawLore.get(lineCount);
+        for (final Object rawSupposedLine : rawLore) {
 
             if (!(rawSupposedLine instanceof final String rawLine)) {
-                Logger.warn(this, "Failed to parse the '%d' line of lore of '%s': Not a string '%s'.".formatted(lineCount, itemId, rawSupposedLine));
+                Logger.warn(this, "Failed to parse line of lore of '%s': Not a string '%s'.".formatted(itemId, rawSupposedLine));
                 continue;
             }
 
-            lore[lineCount] = MINI_MESSAGE_PARSER.deserialize(rawLine);
+            lore.add(MINI_MESSAGE_PARSER.deserialize(rawLine));
         }
 
-        final List<?> rawEnchantments = itemEntry.getMapList("enchantments");
+        final List<?> rawEnchantments = itemEntry.getList("enchantments");
         if (rawEnchantments == null) {
             Logger.warn(this, "Failed to parse '%s': Enchantments not found.".formatted(itemId));
             return null;
@@ -236,7 +233,7 @@ public final class CustomItemStorage {
                 continue;
             }
 
-            final String key = String.valueOf(entry.get("key"));
+            final String key = String.valueOf(entry.get("name"));
 
             if (addedEnchantments.contains(key)) {
                 Logger.warn(this, "Failed to parse enchantment '%s' of '%s': A duplicate.".formatted(key, itemId));
@@ -244,24 +241,26 @@ public final class CustomItemStorage {
             }
 
             final Object supposedLevel = entry.get("level");
-            final int level;
+            final short level;
 
             try {
-                level = (short) supposedLevel;
-            } catch (ClassCastException e) {
-                Logger.warn(this, "Failed to parse enchantment '%s' of '%s': Invalid level '%s'.".formatted(key, itemId, supposedLevel));
+                level = Short.parseShort(String.valueOf(supposedLevel));
+            } catch (NumberFormatException e) {
+                Logger.warn(this, "Failed to parse %s having class %s".formatted(supposedLevel, supposedLevel.getClass().getSimpleName()));
+
+//                Logger.warn(this, "Failed to parse enchantment '%s' of '%s': Invalid level '%s'.".formatted(key, itemId, supposedLevel));
                 continue;
             }
 
             if (level < 0 || level > 255) {
-                Logger.warn(this, "Enchantment '%s' of '%s' has a level beyond the cap (%d). It may cause inconsistent results.".formatted(key, itemId, supposedLevel));
+                Logger.warn(this, "Enchantment '%s' of '%s' has a level beyond the cap (%s). It may cause inconsistent results.".formatted(key, itemId, supposedLevel));
             }
 
             enchantments.add(new EnchantmentEntry(key, level));
             addedEnchantments.add(key);
         }
 
-        final List<?> rawAttributes = itemEntry.getMapList("attributes");
+        final List<?> rawAttributes = itemEntry.getList("attributes");
         if (rawAttributes == null) {
             Logger.warn(this, "Failed to parse '%s': Attributes not found.".formatted(itemId));
             return null;
@@ -277,12 +276,12 @@ public final class CustomItemStorage {
                 continue;
             }
 
-            if (entry.size() != 3) {
-                Logger.warn(this, "Failed to parse antribute of '%s': '%s' is not valid entry.".formatted(itemId, entry));
+            if (entry.size() != 2) {
+                Logger.warn(this, "Failed to parse attribute of '%s': '%s' is not valid entry.".formatted(itemId, entry));
                 continue;
             }
 
-            final String key = String.valueOf(entry.get("key"));
+            final String key = String.valueOf(entry.get("name"));
             
             if (addedAttributes.contains(key)) {
                 Logger.warn(this, "Failed to parse attribute '%s' of '%s': A duplicate.".formatted(key, itemId));
@@ -291,7 +290,7 @@ public final class CustomItemStorage {
 
             final Object supposedRawModifiers = entry.get("modifiers");
 
-            if (!(supposedRawModifiers instanceof final List rawModifiers)) {
+            if (!(supposedRawModifiers instanceof final List<?> rawModifiers)) {
                 Logger.warn(this, "Failed to parse attribute '%s' of '%s': '%s' is invalid modifiers.".formatted(key, itemId, supposedRawModifiers));
                 continue;
             }
@@ -375,7 +374,7 @@ public final class CustomItemStorage {
         final ItemMeta itemMeta = item.getItemMeta();
 
         itemMeta.displayName(displayName);
-        itemMeta.lore(List.of(lore));
+        itemMeta.lore(lore);
 
         for (final EnchantmentEntry entry : enchantments) {
 
@@ -388,7 +387,7 @@ public final class CustomItemStorage {
                 continue;
             }
 
-            item.addUnsafeEnchantment(enchantment, entry.level());
+            itemMeta.addEnchant(enchantment, entry.level(), true);
         }
 
         for (final AttributeEntry entry : attributes) {
@@ -397,6 +396,11 @@ public final class CustomItemStorage {
             final Attribute attribute = RegistryAccess.registryAccess()
                 .getRegistry(RegistryKey.ATTRIBUTE)
                 .get(new NamespacedKey("minecraft", key));
+
+            if (attribute == null) {
+                Logger.warn(this, "Failed to parse attribute '%s' of '%s': Invalid attribute.".formatted(key, itemId));
+                continue;
+            }
 
             for (final AttributeModifierEntry modifierEntry : entry.modifiers()) {
 
@@ -429,47 +433,78 @@ public final class CustomItemStorage {
 
         item.setItemMeta(itemMeta);
 
+        Logger.info(this, "Raw enchantments?: %s".formatted(enchantments));
+        Logger.info(this, "Enchantments: %s and %s".formatted(itemMeta.getEnchants(), item.getEnchantments()));
+
         return item.serializeAsBytes();
     }
 
     private void serializeItemIntoSection(ConfigurationSection section, ItemStack item) {
+        final Material material = item.getType();
+        final String materialName = material.name();
+
         final Component displayName = item.displayName();
-        final String rawDisplayName = MINI_MESSAGE_PARSER.serialize(displayName);
+
+        // Should do it differently. Right now it converts it as [name]
+        final String rawDisplayName = PlainTextComponentSerializer.plainText().serialize(displayName);
 
         final List<Component> lore = item.lore();
         final List<String> rawLore = new ArrayList<>();
 
         if (lore != null && !lore.isEmpty()) {
             for (final Component line : lore) {
-                rawLore.add(MINI_MESSAGE_PARSER.serialize(line));
+
+                // Likewise. Change.
+                rawLore.add(PlainTextComponentSerializer.plainText().serialize(line));
             }
         }
 
-        final Map<Enchantment, Integer> enchantments = item.getEnchantments();
+        section.set("material", materialName);
+        section.set("name", rawDisplayName);
+        section.set("lore", rawLore);
+
+        final ItemMeta itemMeta = item.getItemMeta();
+
+        if (itemMeta == null) {
+            section.set("enchantments", List.of());
+            section.set("attributes", List.of());
+            section.set("keys", List.of());
+            return;
+        }
+
+        final Map<Enchantment, Integer> enchantments = itemMeta.getEnchants();
         final List<EnchantmentEntry> rawEnchantments = new ArrayList<>();
 
-        if (enchantments != null && !enchantments.isEmpty()) {
+        if (!enchantments.isEmpty()) {
             for (final var entry : enchantments.entrySet()) {
 
                 // Enchantment -> NamespacedKey -> "namespace:key"
-                rawEnchantments.add(new EnchantmentEntry(entry.getKey().getKey().getKey(), entry.getValue()));
+                rawEnchantments.add(new EnchantmentEntry(
+                        entry.getKey().getKey().getKey(),
+                        entry.getValue())
+                );
             }
         }
-
-        final ItemMeta itemMeta = item.getItemMeta();
 
         final Multimap<Attribute, AttributeModifier> attributes = itemMeta.getAttributeModifiers();
         final List<AttributeEntry> rawAttributes = new ArrayList<>();
 
-        for (final var entry : attributes.entries()) {
-            
+        if (attributes != null) {
+            for (final var entry : attributes.entries()) {
+                // Do stuff.
+            }
         }
 
-        // Effects, attributes, keys
+        final PersistentDataContainer container = itemMeta.getPersistentDataContainer();
+        final Set<String> rawKeys = new HashSet<>();
 
-        section.set("name", rawDisplayName);
-        section.set("lore", rawLore);
+        for (final NamespacedKey key : container.getKeys()) {
+            // add keys
+        }
+
         section.set("enchantments", rawEnchantments);
+        section.set("attributes", rawAttributes);
+        section.set("keys", rawKeys);
     }
 
     private record EnchantmentEntry(String key, int level) {

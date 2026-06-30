@@ -1,10 +1,12 @@
 package ru.vladimir.itemmanager.command;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permission;
 import org.jetbrains.annotations.NotNull;
 
@@ -87,5 +89,16 @@ public final class CommandService {
 
     Optional<SubCommandWrapper> getWrapperForAlias(String alias) {
         return Optional.ofNullable(subCommandRegistry.get(alias));
+    }
+
+    Set<String> getAliasesFor(CommandSender sender) {
+        final Set<String> aliases = new HashSet<>();
+
+        for (final var entry : instance.subCommandRegistry.entrySet()) {
+            if (!sender.hasPermission(entry.getValue().permission())) continue;
+            aliases.add(entry.getKey());
+        }
+
+        return aliases;
     }
 }

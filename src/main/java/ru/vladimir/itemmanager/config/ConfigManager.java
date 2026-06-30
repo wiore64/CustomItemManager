@@ -32,8 +32,20 @@ public final class ConfigManager {
 
         instance = new ConfigManager();
 
-        instance.config = instance.readConfig(YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "config.yml")));
-        instance.messages = instance.readMessages(YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "messages.yml")));
+        final File configFile = new File(plugin.getDataFolder(), "config.yml");
+        if (!configFile.exists()) {
+            Logger.info(instance, "Config file is not found. Creating a new one...");
+            plugin.saveResource("config.yml", false);
+        }
+
+        final File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        if (!messagesFile.exists()) {
+            Logger.info(instance, "Messages file is not found. Creating a new one...");
+            plugin.saveResource("messages.yml", false);
+        }
+
+        instance.config = instance.readConfig(YamlConfiguration.loadConfiguration(configFile));
+        instance.messages = instance.readMessages(YamlConfiguration.loadConfiguration(messagesFile));
 
         Logger.debug(instance, "Initialized successfully.");
     }

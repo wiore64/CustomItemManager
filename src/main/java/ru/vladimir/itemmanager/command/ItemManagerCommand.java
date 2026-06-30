@@ -50,8 +50,8 @@ public class ItemManagerCommand implements TabExecutor {
         if (!sender.hasPermission(PRIMARY_PERMISSION))
             return List.of();
 
-        if (args.length == 0)
-            return List.of();
+        if (args.length == 1)
+            return List.copyOf(CommandService.getInstance().getAliasesFor(sender));
 
         final var optionalWrapper = CommandService.getInstance().getWrapperForAlias(args[0]);
 

@@ -30,7 +30,7 @@ public class AddItem implements SubCommand {
 
         final ItemStack item = player.getInventory().getItemInMainHand();
         
-        if (item == null || item.getType().isAir()) {
+        if (item.getType().isAir()) {
             Messager.sendMessage(sender, ConfigManager.getInstance().getMessages().mustHoldItem());
             return;
         }
