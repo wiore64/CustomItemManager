@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 public final class CustomItemBuilder {
 
-    private static final long ITEM_CACHE_ENTRY_EXPIRE_IN = 180000L;
+    private static final long ITEM_CACHE_ENTRY_EXPIRE_IN = 180000L; // 3 minutes in ms
     private final CustomItemStorage itemStorage;
     private final Map<String, ItemCacheEntry> itemCache;
 
@@ -24,16 +24,11 @@ public final class CustomItemBuilder {
     public @NotNull Optional<ItemStack> build(@NotNull String itemId) {
         clearOldCacheEntries();
 
-        if (!itemStorage.isCustomItem(itemId))
-            return Optional.empty();
-
-        if (itemCache.containsKey(itemId))
-            return Optional.of(itemCache.get(itemId).item);
+        if (!itemStorage.isCustomItem(itemId)) return Optional.empty();
+        if (itemCache.containsKey(itemId)) return Optional.of(itemCache.get(itemId).item);
 
         final Optional<ItemStack> customItem = itemStorage.getCustomItem(itemId);
-
-        if (customItem.isEmpty())
-            return Optional.empty();
+        if (customItem.isEmpty()) return Optional.empty();
 
         addNewCacheEntry(itemId, customItem.get());
 
@@ -45,10 +40,9 @@ public final class CustomItemBuilder {
 
         final Instant timeNow = Instant.now();
 
-        for (var entry : Set.copyOf(itemCache.entrySet())) {
-            if (entry.getValue().isExpired(timeNow)) {
-                itemCache.remove(entry.getKey());
-            }
+        for (final var entry : Set.copyOf(itemCache.entrySet())) {
+            if (!entry.getValue().isExpired(timeNow)) continue;
+            itemCache.remove(entry.getKey());
         }
     }
 
@@ -56,16 +50,7 @@ public final class CustomItemBuilder {
         itemCache.put(itemId, new ItemCacheEntry(item, Instant.now()));
     }
 
-    private static class ItemCacheEntry {
-        
-        private final ItemStack item;
-        private final Instant timestamp;
-
-        private ItemCacheEntry(ItemStack item, Instant timestamp) {
-            this.item = item;
-            this.timestamp = timestamp;
-        }
-
+    private record ItemCacheEntry(ItemStack item, Instant timestamp) {
         private boolean isExpired(Instant newestTimestamp) {
             return Duration.between(newestTimestamp, this.timestamp).toMillis() > ITEM_CACHE_ENTRY_EXPIRE_IN;
         }

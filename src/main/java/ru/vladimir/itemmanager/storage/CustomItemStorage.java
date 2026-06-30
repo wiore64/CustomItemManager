@@ -2,16 +2,10 @@ package ru.vladimir.itemmanager.storage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
@@ -46,34 +40,31 @@ public final class CustomItemStorage {
     private final Map<String, byte[]> itemRegistry;
 
     public CustomItemStorage(@NotNull ItemManager plugin) {
+        Logger.debug(this, "Initializing...");
+
         this.plugin = plugin;
         this.itemRegistry = new ConcurrentHashMap<>();
 
-        if (!new File(plugin.getDataFolder(), "items.yml").exists()) {
-            Logger.info(this, "items.yml not found. Creating a new one...");
-            plugin.saveResource("items.yml", false);
-        }
-
         refreshItemRegistry(getItemConfigFile(), getItemConfig());
+
+        Logger.debug(this, "Initialized successfully.");
     }
 
     private void refreshItemRegistry(File file, FileConfiguration itemConfig) {
         itemRegistry.clear();
         
         final Set<String> itemIds = itemConfig.getKeys(false);
-        if (itemIds.isEmpty()) return;
-
         for (final String itemId : itemIds) {
             
             final ConfigurationSection section = itemConfig.getConfigurationSection(itemId);
             if (section == null) {
-                Logger.warn(this, "Item ID '%s' is not a configuration section.".formatted(itemId));
+                Logger.warn(this, "Item '%s' is not a configuration section.".formatted(itemId));
                 continue;
             }
 
             final byte[] parsedItemData = deserializeItemEntryIntoBytes(itemId, section);
             if (parsedItemData == null) {
-                Logger.warn(this, "Item ID '%s' failed to be parsed.".formatted(itemId));
+                Logger.warn(this, "Failed to parse '%s'.".formatted(itemId));
                 continue;
             }
 
@@ -123,18 +114,27 @@ public final class CustomItemStorage {
         return true;
     }
 
+    // TO UPDATE - START
+
     private File getItemConfigFile() {
-        return new File(plugin.getDataFolder(), FILE_STORAGE_NAME);
+        final File configFile = new File(plugin.getDataFolder(), FILE_STORAGE_NAME);
+
+        if (!configFile.exists()) {
+            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(FILE_STORAGE_NAME));
+            plugin.saveResource(FILE_STORAGE_NAME, false);
+        }
+
+        return configFile;
     }
 
     private FileConfiguration getItemConfig() {
-        return YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), FILE_STORAGE_NAME));
+        return YamlConfiguration.loadConfiguration(getItemConfigFile());
     }
 
     private void saveItemConfig(File file, FileConfiguration config) {
         if (!file.exists()) {
+            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(FILE_STORAGE_NAME));
             plugin.saveResource(FILE_STORAGE_NAME, false);
-            Logger.info(this, "'%s' was not found. A new version has been created.".formatted(FILE_STORAGE_NAME));
         }
 
         try {
@@ -143,6 +143,8 @@ public final class CustomItemStorage {
             Logger.error(this, "Failed to save file configuration to '%s'.".formatted(FILE_STORAGE_NAME), e);
         }
     }
+
+    // TO UPDATE - END
 
     public boolean registerCustomItem(@NotNull String itemId, @NotNull ItemStack item) {
         if (isCustomItem(itemId)) return false;
@@ -180,7 +182,7 @@ public final class CustomItemStorage {
         final Material material;
 
         try {
-            material = Material.valueOf(materialName);
+            material = Material.valueOf(materialName.strip().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             Logger.warn(this, "Failed to parse '%s': Bad material name '%s'.".formatted(itemId, materialName));
             return null;
@@ -203,12 +205,10 @@ public final class CustomItemStorage {
         final List<Component> lore = new ArrayList<>();
 
         for (final Object rawSupposedLine : rawLore) {
-
             if (!(rawSupposedLine instanceof final String rawLine)) {
                 Logger.warn(this, "Failed to parse line of lore of '%s': Not a string '%s'.".formatted(itemId, rawSupposedLine));
                 continue;
             }
-
             lore.add(MINI_MESSAGE_PARSER.deserialize(rawLine));
         }
 
@@ -222,18 +222,17 @@ public final class CustomItemStorage {
         final Set<String> addedEnchantments = new HashSet<>();
     
         for (final Object rawEnchantment : rawEnchantments) {
-            
             if (!(rawEnchantment instanceof final Map<?, ?> entry)) {
                 Logger.warn(this, "Failed to parse enchantment of '%s': '%s' is not entry.".formatted(itemId, rawEnchantment));
                 continue;
             }
 
-            if (entry.size() != 2) {
+            if (!entry.containsKey("name") || !entry.containsKey("level")) {
                 Logger.warn(this, "Failed to parse enchantment of '%s': '%s' is not valid entry.".formatted(itemId, entry));
                 continue;
             }
 
-            final String key = String.valueOf(entry.get("name"));
+            final String key = String.valueOf(entry.get("name")).strip().toLowerCase(Locale.ROOT);
 
             if (addedEnchantments.contains(key)) {
                 Logger.warn(this, "Failed to parse enchantment '%s' of '%s': A duplicate.".formatted(key, itemId));
@@ -241,19 +240,17 @@ public final class CustomItemStorage {
             }
 
             final Object supposedLevel = entry.get("level");
-            final short level;
+            final int level;
 
             try {
-                level = Short.parseShort(String.valueOf(supposedLevel));
+                level = Integer.parseInt(String.valueOf(supposedLevel));
             } catch (NumberFormatException e) {
-                Logger.warn(this, "Failed to parse %s having class %s".formatted(supposedLevel, supposedLevel.getClass().getSimpleName()));
-
-//                Logger.warn(this, "Failed to parse enchantment '%s' of '%s': Invalid level '%s'.".formatted(key, itemId, supposedLevel));
+                Logger.warn(this, "Failed to parse enchantment '%s' of '%s': Invalid level '%s'.".formatted(key, itemId, supposedLevel));
                 continue;
             }
 
             if (level < 0 || level > 255) {
-                Logger.warn(this, "Enchantment '%s' of '%s' has a level beyond the cap (%s). It may cause inconsistent results.".formatted(key, itemId, supposedLevel));
+                Logger.warn(this, "Enchantment '%s' of '%s' has a level exceeding the capacity 0-255 (%d).".formatted(key, itemId, level));
             }
 
             enchantments.add(new EnchantmentEntry(key, level));
@@ -270,18 +267,17 @@ public final class CustomItemStorage {
         final Set<String> addedAttributes = new HashSet<>();
 
         for (final Object rawAttribute : rawAttributes) {
-
             if (!(rawAttribute instanceof final Map<?, ?> entry)) {
                 Logger.warn(this, "Failed to parse attribute of '%s': '%s' is not entry.".formatted(itemId, rawAttribute));
                 continue;
             }
 
-            if (entry.size() != 2) {
+            if (!entry.containsKey("name") || !entry.containsKey("modifiers")) {
                 Logger.warn(this, "Failed to parse attribute of '%s': '%s' is not valid entry.".formatted(itemId, entry));
                 continue;
             }
 
-            final String key = String.valueOf(entry.get("name"));
+            final String key = String.valueOf(entry.get("name")).strip().toLowerCase(Locale.ROOT);
             
             if (addedAttributes.contains(key)) {
                 Logger.warn(this, "Failed to parse attribute '%s' of '%s': A duplicate.".formatted(key, itemId));
@@ -289,22 +285,20 @@ public final class CustomItemStorage {
             }
 
             final Object supposedRawModifiers = entry.get("modifiers");
-
             if (!(supposedRawModifiers instanceof final List<?> rawModifiers)) {
-                Logger.warn(this, "Failed to parse attribute '%s' of '%s': '%s' is invalid modifiers.".formatted(key, itemId, supposedRawModifiers));
+                Logger.warn(this, "Failed to parse attribute '%s' of '%s': '%s' is not a valid list of modifiers.".formatted(key, itemId, supposedRawModifiers));
                 continue;
             }
 
             final List<AttributeModifierEntry> modifiers = new ArrayList<>();
 
             for (final Object rawModifier : rawModifiers) {
-
                 if (!(rawModifier instanceof final Map<?, ?> modifierEntry)) {
                     Logger.warn(this, "Failed to parse attribute modifier of '%s' of '%s': '%s' is not entry.".formatted(key, itemId, rawModifier));
                     continue;
                 }
 
-                if (modifierEntry.size() < 2 || modifierEntry.size() > 3) {
+                if (!modifierEntry.containsKey("operation") || !modifierEntry.containsKey("amount")) {
                     Logger.warn(this, "Failed to parse attribute modifier of '%s' of '%s': '%s' is not valid entry.".formatted(key, itemId, modifierEntry));
                     continue;
                 }
@@ -313,8 +307,8 @@ public final class CustomItemStorage {
                 final double amount;
 
                 try {
-                    amount = (double) supposedAmount;
-                } catch (IllegalArgumentException e) {
+                    amount = Double.parseDouble(String.valueOf(supposedAmount));
+                } catch (NumberFormatException e) {
                     Logger.warn(this, "Failed to parse attribute modifier of '%s' of '%s': '%s' is not valid amount.".formatted(key, itemId, supposedAmount));
                     continue;
                 }
@@ -343,11 +337,12 @@ public final class CustomItemStorage {
         final Set<String> addedKeys = new HashSet<>();
 
         for (final Object supposedRawKey : rawKeys) {
-
-            if (!(supposedRawKey instanceof final String rawKey)) {
+            if (!(supposedRawKey instanceof String)) {
                 Logger.warn(this, "Failed to parse key of '%s': '%s' is not key.".formatted(itemId, supposedRawKey));
                 continue;
             }
+
+            final String rawKey = String.valueOf(supposedRawKey).strip().toLowerCase(Locale.ROOT);
 
             if (addedKeys.contains(rawKey)) {
                 Logger.warn(this, "Failed to parse key '%s' of '%s': A duplicate.".formatted(rawKey, itemId));
@@ -356,7 +351,13 @@ public final class CustomItemStorage {
 
             final String[] splitKey = rawKey.split(":");
 
-            if (splitKey.length > 2) {
+            if (splitKey.length == 1 && splitKey[0].isEmpty()) {
+                Logger.warn(this, "Failed to parse key '%s' of '%s': Invalid format.".formatted(rawKey, itemId));
+                continue;
+            } else if (splitKey.length == 2 && (splitKey[0].isEmpty() || splitKey[1].isEmpty())) {
+                Logger.warn(this, "Failed to parse key '%s' of '%s': Invalid format.".formatted(rawKey, itemId));
+                continue;
+            } else if (splitKey.length > 2) {
                 Logger.warn(this, "Failed to parse key '%s' of '%s': Invalid format.".formatted(rawKey, itemId));
                 continue;
             }
@@ -371,10 +372,15 @@ public final class CustomItemStorage {
         }
 
         final ItemStack item = ItemStack.of(material);
-        final ItemMeta itemMeta = item.getItemMeta();
+        final ItemMeta meta = Bukkit.getItemFactory().getItemMeta(material);
 
-        itemMeta.displayName(displayName);
-        itemMeta.lore(lore);
+        if (meta == null) {
+            Logger.warn(this, "Material '%s' of '%s' does not support item meta; configured display name, lore, enchantments, attributes, and keys were ignored for it.".formatted(materialName, itemId));
+            return item.serializeAsBytes();
+        }
+
+        meta.displayName(displayName);
+        meta.lore(lore);
 
         for (final EnchantmentEntry entry : enchantments) {
 
@@ -387,7 +393,7 @@ public final class CustomItemStorage {
                 continue;
             }
 
-            itemMeta.addEnchant(enchantment, entry.level(), true);
+            meta.addEnchant(enchantment, entry.level(), true);
         }
 
         for (final AttributeEntry entry : attributes) {
@@ -418,44 +424,37 @@ public final class CustomItemStorage {
                 final EquipmentSlotGroup slotGroup = slotGroupName == null ? null : EquipmentSlotGroup.getByName(slotGroupName);
 
                 if (slotGroup == null) {
-                    itemMeta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(plugin, UUID.randomUUID().toString()), modifierEntry.amount(), modifierOperation));
+                    meta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(plugin, UUID.randomUUID().toString()), modifierEntry.amount(), modifierOperation));
                 } else {
-                    itemMeta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(plugin, UUID.randomUUID().toString()), modifierEntry.amount(), modifierOperation, slotGroup));
+                    meta.addAttributeModifier(attribute, new AttributeModifier(new NamespacedKey(plugin, UUID.randomUUID().toString()), modifierEntry.amount(), modifierOperation, slotGroup));
                 }
             }
         }
 
-        final PersistentDataContainer container = itemMeta.getPersistentDataContainer();
+        final PersistentDataContainer container = meta.getPersistentDataContainer();
 
         for (final NamespacedKey key : keys) {
             container.set(key, PersistentDataType.BOOLEAN, true);
         }
 
-        item.setItemMeta(itemMeta);
-
-        Logger.info(this, "Raw enchantments?: %s".formatted(enchantments));
-        Logger.info(this, "Enchantments: %s and %s".formatted(itemMeta.getEnchants(), item.getEnchantments()));
+        item.setItemMeta(meta);
 
         return item.serializeAsBytes();
     }
 
     private void serializeItemIntoSection(ConfigurationSection section, ItemStack item) {
         final Material material = item.getType();
-        final String materialName = material.name();
+        final String materialName = material.toString().toUpperCase(Locale.ROOT);
 
         final Component displayName = item.displayName();
-
-        // Should do it differently. Right now it converts it as [name]
-        final String rawDisplayName = PlainTextComponentSerializer.plainText().serialize(displayName);
+        final String rawDisplayName = MINI_MESSAGE_PARSER.serialize(displayName);
 
         final List<Component> lore = item.lore();
         final List<String> rawLore = new ArrayList<>();
 
-        if (lore != null && !lore.isEmpty()) {
+        if (lore != null) {
             for (final Component line : lore) {
-
-                // Likewise. Change.
-                rawLore.add(PlainTextComponentSerializer.plainText().serialize(line));
+                rawLore.add(MINI_MESSAGE_PARSER.serialize(line));
             }
         }
 
@@ -473,33 +472,44 @@ public final class CustomItemStorage {
         }
 
         final Map<Enchantment, Integer> enchantments = itemMeta.getEnchants();
-        final List<EnchantmentEntry> rawEnchantments = new ArrayList<>();
+        final List<Map<String, Object>> rawEnchantments = new ArrayList<>();
 
         if (!enchantments.isEmpty()) {
             for (final var entry : enchantments.entrySet()) {
-
-                // Enchantment -> NamespacedKey -> "namespace:key"
-                rawEnchantments.add(new EnchantmentEntry(
-                        entry.getKey().getKey().getKey(),
-                        entry.getValue())
-                );
+                rawEnchantments.add(Map.of(
+                        "name", entry.getKey().getKey().getKey(),
+                        "level", entry.getValue()
+                ));
             }
         }
 
         final Multimap<Attribute, AttributeModifier> attributes = itemMeta.getAttributeModifiers();
-        final List<AttributeEntry> rawAttributes = new ArrayList<>();
+        final List<Map<String, Object>> rawAttributes = new ArrayList<>();
 
         if (attributes != null) {
-            for (final var entry : attributes.entries()) {
-                // Do stuff.
+            for (final var entry : attributes.asMap().entrySet()) {
+
+                final List<Map<String, Object>> rawAttributeModifiers = new ArrayList<>();
+                for (final var modifierEntry : entry.getValue()) {
+                    rawAttributeModifiers.add(Map.of(
+                            "operation", modifierEntry.getOperation().toString().toUpperCase(Locale.ROOT),
+                            "amount", modifierEntry.getAmount(),
+                            "slot", modifierEntry.getSlotGroup().toString()
+                    ));
+                }
+
+                rawAttributes.add(Map.of(
+                        "name", entry.getKey().getKey().getKey(),
+                        "modifiers", rawAttributeModifiers
+                ));
             }
         }
 
         final PersistentDataContainer container = itemMeta.getPersistentDataContainer();
-        final Set<String> rawKeys = new HashSet<>();
+        final List<String> rawKeys = new ArrayList<>();
 
         for (final NamespacedKey key : container.getKeys()) {
-            // add keys
+            rawKeys.add(key.toString());
         }
 
         section.set("enchantments", rawEnchantments);
@@ -509,21 +519,21 @@ public final class CustomItemStorage {
 
     private record EnchantmentEntry(String key, int level) {
         private EnchantmentEntry(String key, int level) {
-            this.key = key.strip().toLowerCase();
+            this.key = key.strip().toLowerCase(Locale.ROOT);
             this.level = level;
         }
     }
 
     private record AttributeEntry(String key, List<AttributeModifierEntry> modifiers) {
         private AttributeEntry(String key, List<AttributeModifierEntry> modifiers) {
-            this.key = key.strip().toLowerCase();
+            this.key = key.strip().toLowerCase(Locale.ROOT);
             this.modifiers = modifiers;
         }
     }
     private record AttributeModifierEntry(String slotGroupName, String operationName, double amount) {
         private AttributeModifierEntry(String slotGroupName, String operationName, double amount) {
-            this.slotGroupName = slotGroupName == null ? null : slotGroupName.strip().toUpperCase();
-            this.operationName = operationName.strip().toUpperCase();
+            this.slotGroupName = slotGroupName.strip().toLowerCase(Locale.ROOT);
+            this.operationName = operationName.strip().toUpperCase(Locale.ROOT);
             this.amount = amount;
         }
     }

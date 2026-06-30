@@ -1,3 +1,11 @@
 # ======================= #
 # = ItemManager | Items = #
 # ======================= #
+
+#
+# Learn more about:
+# - Material names: https://jd.papermc.io/paper/1.21.1/org/bukkit/Material.html
+# - Enchantment keys: https://jd.papermc.io/paper/26.2/io/papermc/paper/registry/keys/EnchantmentKeys.html
+# - Attribute keys: https://jd.papermc.io/paper/26.2/io/papermc/paper/registry/keys/AttributeKeys.html
+# - Attribute Modifiers: https://jd.papermc.io/paper/26.2/org/bukkit/attribute/AttributeModifier.html
+#
