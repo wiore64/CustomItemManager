@@ -22,7 +22,13 @@ public final class CustomItemBuilder {
     }
     
     public @NotNull Optional<ItemStack> build(@NotNull String itemId) {
-        clearOldCacheEntries();
+        // IMPLICIT RELATIONSHIP Builder -> Storage -- START
+        if (itemStorage.consumeCacheInvalidationSignal()) {
+            clearCache();
+        } else {
+            clearOldCacheEntries();
+        }
+        // IMPLICIT RELATIONSHIP Builder -> Storage -- END
 
         if (!itemStorage.isCustomItem(itemId)) return Optional.empty();
         if (itemCache.containsKey(itemId)) return Optional.of(itemCache.get(itemId).item);
@@ -44,6 +50,10 @@ public final class CustomItemBuilder {
             if (!entry.getValue().isExpired(timeNow)) continue;
             itemCache.remove(entry.getKey());
         }
+    }
+
+    private void clearCache() {
+        itemCache.clear();
     }
 
     private void addNewCacheEntry(String itemId, ItemStack item) {

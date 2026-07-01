@@ -1,6 +1,7 @@
 package ru.vladimir.itemmanager.config;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.logging.Level;
 
 import org.bukkit.configuration.file.FileConfiguration;
@@ -49,15 +50,17 @@ public final class ConfigManager {
     }
 
     private GeneralConfig parseGeneralConfig(FileConfiguration config) {
-        final String levelName = config.getString("logging-level");
+        String levelName = config.getString("logging-level");
 
         if (levelName == null) {
             Logger.warn(this, "Failed to parse logging level in '%s': Level not found.".formatted(GENERAL_CONFIG_FILE_NAME));
             return new GeneralConfig(Level.INFO);
         }
 
+        levelName = levelName.strip().toUpperCase(Locale.ROOT);
+
         try {
-            return new GeneralConfig(Level.parse(levelName));
+            return new GeneralConfig(levelName.equals("DEBUG") ? Level.FINE : Level.parse(levelName));
         } catch (IllegalArgumentException e) {
             Logger.warn(this, "Failed to parse logging level: Invalid level '%s'.".formatted(levelName));
             return new GeneralConfig(Level.INFO);

@@ -1,9 +1,3 @@
-Being able to invalidate cache.
-
-Name parsing for components n mini messages.
-
-Custom enchant namespaces.
-
 # TODO
 
 A todo list dedicated for the project.
@@ -12,10 +6,16 @@ A todo list dedicated for the project.
 
 These tasks currently in progress.
 
-- [ ] Invalidate cache after each registry refresh
-- [ ] Fix component parsing for items
+- [ ] Nothing much.
+
+## In future
+
+Something that will or will not be done in the long future.
+
 - [ ] Enable custom enchant namespaced keys
 
 # DONE
 
-- [x] Nothing yet...
+- [x] Invalidate cache after each registry refresh
+- [x] Fix component parsing for items
+- [x] Logger to log levels based on the set level

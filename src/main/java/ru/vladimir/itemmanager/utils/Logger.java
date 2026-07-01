@@ -1,5 +1,6 @@
 package ru.vladimir.itemmanager.utils;
 
+import java.util.logging.Handler;
 import java.util.logging.Level;
 
 public final class Logger {
@@ -7,10 +8,29 @@ public final class Logger {
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("ItemManager");
     private static Level minLevel = Level.ALL;
 
+    static {
+        LOGGER.setLevel(Level.ALL);
+        final Handler[] handlers = LOGGER.getHandlers();
+        if (handlers != null) {
+            for (final Handler handler : handlers) {
+                handler.setLevel(Level.ALL);
+            }
+        }
+    }
+
     private Logger() {}
 
     public static void setLevel(Level l) {
         minLevel = l;
+
+        LOGGER.setLevel(l);
+
+        final Handler[] handlers = LOGGER.getHandlers();
+        if (handlers == null) return;
+
+        for (final Handler handler : handlers) {
+            handler.setLevel(Level.ALL);
+        }
     }
     
     public static void debug(Object origin, String message) {

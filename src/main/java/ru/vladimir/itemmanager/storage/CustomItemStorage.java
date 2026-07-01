@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import net.kyori.adventure.text.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -27,7 +29,6 @@ import com.google.common.collect.Multimap;
 
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import ru.vladimir.itemmanager.ItemManager;
 import ru.vladimir.itemmanager.utils.Logger;
@@ -37,20 +38,26 @@ public final class CustomItemStorage {
     private static final MiniMessage MINI_MESSAGE_PARSER = MiniMessage.miniMessage();
     private static final String FILE_STORAGE_NAME = "items.yml";
     private final ItemManager plugin;
+    private final File configFile;
     private final Map<String, byte[]> itemRegistry;
+    private final AtomicBoolean invalidateBuilderCache;
 
     public CustomItemStorage(@NotNull ItemManager plugin) {
         Logger.debug(this, "Initializing...");
 
         this.plugin = plugin;
+        this.configFile = new File(plugin.getDataFolder(), FILE_STORAGE_NAME);
         this.itemRegistry = new ConcurrentHashMap<>();
+        this.invalidateBuilderCache = new AtomicBoolean();
 
-        refreshItemRegistry(getItemConfigFile(), getItemConfig());
+        ensureConfigFileExists();
+
+        refreshItemRegistry(getItemConfig(configFile));
 
         Logger.debug(this, "Initialized successfully.");
     }
 
-    private void refreshItemRegistry(File file, FileConfiguration itemConfig) {
+    private void refreshItemRegistry(FileConfiguration itemConfig) {
         itemRegistry.clear();
         
         final Set<String> itemIds = itemConfig.getKeys(false);
@@ -70,10 +77,12 @@ public final class CustomItemStorage {
 
             itemRegistry.put(itemId, parsedItemData);
         }
+
+        registryRefreshed();
     }
 
     private boolean appendItemToStorage(File file, FileConfiguration itemConfig, String itemId, ItemStack item) {
-        refreshItemRegistry(file, itemConfig);
+        refreshItemRegistry(itemConfig);
 
         if (itemConfig.contains(itemId)) return false;
 
@@ -93,69 +102,60 @@ public final class CustomItemStorage {
             sectionToCopyTo.set(key, value);
         }
 
-        saveItemConfig(file, itemConfig);
+        saveItemConfig(itemConfig);
 
-        refreshItemRegistry(file, itemConfig);
+        refreshItemRegistry(itemConfig);
 
         return true;
     }
 
     private boolean removeItemFromStorage(File file, FileConfiguration itemConfig, String itemId) {
-        refreshItemRegistry(file, itemConfig);
+        refreshItemRegistry(itemConfig);
 
         if (!itemConfig.contains(itemId)) return false;
         
         itemConfig.set(itemId, null);
 
-        saveItemConfig(file, itemConfig);
+        saveItemConfig(itemConfig);
 
-        refreshItemRegistry(file, itemConfig);
+        refreshItemRegistry(itemConfig);
 
         return true;
     }
 
-    // TO UPDATE - START
+    private FileConfiguration getItemConfig(File configFile) {
+        ensureConfigFileExists();
 
-    private File getItemConfigFile() {
-        final File configFile = new File(plugin.getDataFolder(), FILE_STORAGE_NAME);
-
-        if (!configFile.exists()) {
-            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(FILE_STORAGE_NAME));
-            plugin.saveResource(FILE_STORAGE_NAME, false);
-        }
-
-        return configFile;
+        return YamlConfiguration.loadConfiguration(configFile);
     }
 
-    private FileConfiguration getItemConfig() {
-        return YamlConfiguration.loadConfiguration(getItemConfigFile());
-    }
-
-    private void saveItemConfig(File file, FileConfiguration config) {
-        if (!file.exists()) {
-            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(FILE_STORAGE_NAME));
-            plugin.saveResource(FILE_STORAGE_NAME, false);
-        }
+    private void saveItemConfig(FileConfiguration config) {
+        ensureConfigFileExists();
 
         try {
-            config.save(file);
+            config.save(configFile);
         } catch (IOException e) {
             Logger.error(this, "Failed to save file configuration to '%s'.".formatted(FILE_STORAGE_NAME), e);
         }
     }
 
-    // TO UPDATE - END
+    private void ensureConfigFileExists() {
+        if (!configFile.exists()) {
+            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(FILE_STORAGE_NAME));
+            plugin.saveResource(FILE_STORAGE_NAME, false);
+        }
+    }
 
     public boolean registerCustomItem(@NotNull String itemId, @NotNull ItemStack item) {
         if (isCustomItem(itemId)) return false;
         
-        return appendItemToStorage(getItemConfigFile(), getItemConfig(), itemId, item);
+        return appendItemToStorage(configFile, getItemConfig(configFile), itemId, item);
     }
 
     public boolean unregisterCustomItem(@NotNull String itemId) {
         if (!isCustomItem(itemId)) return false;
 
-        return removeItemFromStorage(getItemConfigFile(), getItemConfig(), itemId);
+        return removeItemFromStorage(configFile, getItemConfig(configFile), itemId);
     }
 
     public boolean isCustomItem(@NotNull String itemId) {
@@ -171,6 +171,18 @@ public final class CustomItemStorage {
     public @NotNull @Unmodifiable Set<String> getCustomItemIds() {
         return Set.copyOf(itemRegistry.keySet());
     }
+
+    // HIDDEN RELATIONSHIP -- START
+
+    void registryRefreshed() {
+        invalidateBuilderCache.set(true);
+    }
+
+    boolean consumeCacheInvalidationSignal() {
+        return invalidateBuilderCache.getAndSet(false);
+    }
+
+    // HIDDEN RELATIONSHIP -- END
 
     private byte[] deserializeItemEntryIntoBytes(String itemId, ConfigurationSection itemEntry) {
         final String materialName = itemEntry.getString("material");
@@ -446,15 +458,27 @@ public final class CustomItemStorage {
         final Material material = item.getType();
         final String materialName = material.toString().toUpperCase(Locale.ROOT);
 
-        final Component displayName = item.displayName();
-        final String rawDisplayName = MINI_MESSAGE_PARSER.serialize(displayName);
+        final Component displayName = stripTranslatableContainers(item.displayName());
+        final String rawDisplayName;
+
+        if (isDefaultDisplayName(displayName)) {
+            final char capitalLetter = materialName.charAt(0);
+            final String materialNameRest = materialName.substring(1).toLowerCase(Locale.ROOT);
+            rawDisplayName = (item.getEnchantments().isEmpty() ? "<italic:false>" : "") + (capitalLetter + materialNameRest).replace("_", " ");
+        } else {
+            rawDisplayName = MINI_MESSAGE_PARSER.serialize(displayName);
+        }
 
         final List<Component> lore = item.lore();
         final List<String> rawLore = new ArrayList<>();
 
         if (lore != null) {
             for (final Component line : lore) {
+                Logger.info(this, "Serializing this line of lore: %s".formatted(line));
+
                 rawLore.add(MINI_MESSAGE_PARSER.serialize(line));
+
+                Logger.info(this, "Serialized it into this: %s".formatted(MINI_MESSAGE_PARSER.serialize(line)));
             }
         }
 
@@ -515,6 +539,51 @@ public final class CustomItemStorage {
         section.set("enchantments", rawEnchantments);
         section.set("attributes", rawAttributes);
         section.set("keys", rawKeys);
+    }
+
+    public Component stripTranslatableContainers(Component component) {
+        component = component.hoverEvent(null).clickEvent(null).insertion(null);
+
+        if (component instanceof final TranslatableComponent ts) {
+            final List<Component> contents = new ArrayList<>();
+
+            for (final TranslationArgument arg : ts.arguments()) {
+                contents.add(stripTranslatableContainers((Component) arg.value()));
+            }
+
+            for (final Component c : ts.children()) {
+                contents.add(stripTranslatableContainers(c));
+            }
+
+            return Component.text().style(ts.style()).build().children(contents);
+        }
+
+        if (component instanceof final TextComponent tc) {
+            final List<Component> cleanedChildren = new ArrayList<>();
+
+            for (final Component c : tc.children()) {
+                cleanedChildren.add(stripTranslatableContainers(c));
+            }
+
+            return tc.children(cleanedChildren);
+        }
+
+        return component;
+    }
+
+    private boolean isDefaultDisplayName(Component component) {
+        boolean result;
+        for (final Component c : component.children()) {
+            if (!c.children().isEmpty()) {
+                result = isDefaultDisplayName(c);
+                if (!result) return false;
+            }
+            if (c instanceof final TextComponent tc) {
+                result = tc.content().isEmpty();
+                if (!result) return false;
+            }
+        }
+        return true;
     }
 
     private record EnchantmentEntry(String key, int level) {

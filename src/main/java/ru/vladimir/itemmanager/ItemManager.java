@@ -17,7 +17,7 @@ public final class ItemManager extends JavaPlugin {
     
     @Override
     public void onEnable() {
-        Logger.debug(this, "Loading up...");
+        Logger.info(this, "Loading up...");
 
         final ConfigManager configManager = new ConfigManager(this);
 
@@ -37,7 +37,7 @@ public final class ItemManager extends JavaPlugin {
         command.setExecutor(commandHandler);
         command.setTabCompleter(commandHandler);
 
-        Logger.debug(this, "Loaded successfully.");
+        Logger.info(this, "Loaded successfully.");
     }
 
     public void onReload() {
