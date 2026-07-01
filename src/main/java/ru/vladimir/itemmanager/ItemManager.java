@@ -11,8 +11,12 @@ import ru.vladimir.itemmanager.config.ConfigManager;
 import ru.vladimir.itemmanager.storage.CustomItemBuilder;
 import ru.vladimir.itemmanager.storage.CustomItemStorage;
 import ru.vladimir.itemmanager.utils.Logger;
+import ru.vladimir.itemmanager.utils.UpdateChecker;
 
 public final class ItemManager extends JavaPlugin {
+
+    private static final String MAIN_COMMAND_NAME = "itemmanager";
+    private static final String PLUGIN_DOWNLOAD_LINK = "https://github.com/randomlychosenname/ItemManager/releases/latest";
     private static ItemManagerApi api;
     
     @Override
@@ -31,11 +35,17 @@ public final class ItemManager extends JavaPlugin {
         final CommandService commandService = new CommandService(configManager.getMessageConfig());
         final ItemManagerCommand commandHandler = new ItemManagerCommand(commandService, configManager.getMessageConfig());
 
-        final PluginCommand command = this.getCommand("itemmanager");
-        if (command == null) throw new IllegalStateException("Command 'itemmanager' not found in plugin.yml");
+        final PluginCommand command = this.getCommand(MAIN_COMMAND_NAME);
+        if (command == null) throw new IllegalStateException("Command '%s' not found in plugin.yml".formatted(MAIN_COMMAND_NAME));
 
         command.setExecutor(commandHandler);
         command.setTabCompleter(commandHandler);
+
+        if (UpdateChecker.isUpToDate(this.getPluginMeta().getVersion())) {
+            Logger.warn(this, "A new version is available. Download it from here: %s".formatted(PLUGIN_DOWNLOAD_LINK));
+        } else {
+            Logger.info(this, "You're up to date!");
+        }
 
         Logger.info(this, "Loaded successfully.");
     }
@@ -47,7 +57,11 @@ public final class ItemManager extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        Logger.info(this, "Shutting down...");
+
         api = null;
+
+        Logger.info(this, "Shut down successfully.");
     }
 
     public static @NotNull ItemManagerApi getApi() {
