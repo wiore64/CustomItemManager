@@ -25,3 +25,6 @@ run
 
 # bin
 bin/
+
+# Hide the TO-DO file
+TODO.md
