@@ -2,6 +2,7 @@ package ru.vladimir.itemmanager.storage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -133,6 +134,11 @@ public final class CustomItemStorage {
         ensureConfigFileExists();
 
         try {
+            if (config.getKeys(false).isEmpty()) {
+                plugin.saveResource(FILE_STORAGE_NAME, true);
+                return;
+            }
+
             config.save(configFile);
         } catch (IOException e) {
             Logger.getInstance().error(this, "Failed to save file configuration to '%s'.".formatted(FILE_STORAGE_NAME), e);
