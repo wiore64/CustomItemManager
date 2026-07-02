@@ -1,8 +1,12 @@
 # ItemManager
 
-A powerful and centralized custom item management plugin.
+A **powerful and centralized** custom ***item management*** plugin.
 
-ItemManager makes it easy to add, remove, and manage custom items while keeping their configuration in one place. Instead of every plugin implementing its own custom item system, it provides you a shared registry that can also be used by your own plugins through custom item keys.
+**ItemManager** promises your custom items a proper home. 
+
+Register an item **once**, then reference it **anywhere** by its **unique key**, whether it's **your own plugin** or **someone else's**. *No metadata juggling, no hacky storage*. ***Everything is nice and neat!***
+
+It's **blazingly fast**, and gives you **complete control** over how your items are **defined**, all through one **shared registry**. You don't have to go out of your way to handle a *bunch of items with all kinds of meta data*. Just let the plugin to **take care of it** and you will not want to **let go**!
 
 ## Features
 
@@ -10,14 +14,6 @@ ItemManager makes it easy to add, remove, and manage custom items while keeping 
 * **Modify** the **items' properties** directly in the **config**, and see **live updates** after **refreshing the plugin**;
 * **Give** custom items to **others** in **any amount** with an **absolute ease**;
 * **Use** defined by you keys to let **other plugins** interact with it, especially for **custom plugins**.
-
-## Why ItemManager?
-
-**ItemManager** promises your custom items a proper home. 
-
-Register an item **once**, then reference it **anywhere** by its **unique key**, whether it's **your own plugin** or **someone else's**. *No metadata juggling, no hacky storage*. ***Nice and neat!***
-
-It's **blazingly fast**, and gives you **complete control** over how your items are **defined**, all through one **shared registry**. You don't have to go out of your way to handle a *bunch of items with all kinds of meta data*. Just let the plugin to **take care of it** and you will not want to **let go**!
 
 ## Commands
 
@@ -48,4 +44,4 @@ It's **blazingly fast**, and gives you **complete control** over how your items 
 The download process could never be easier!
 1. **Download the latest release.** 
 2. **Place it in your server's plugins folder.** 
-3. **Enjoy your new opportunities!** 
+3. **Enjoy your new opportunities!**
