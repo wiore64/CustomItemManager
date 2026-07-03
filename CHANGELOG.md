@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-04
+
+This is a minor update for the plugin, mostly updating the underlying structure.
+
+### Changed
+
+- Updated serialization/deserialization system to address future maintainability.
+- Added a guide for item configuration, as well as to 'items.yml' itself.
+
 ## [1.0.1] - 2026-07-03
 
 This is a patch for the plugin, addressing a few issues.
