@@ -50,7 +50,7 @@ final class CustomItemDeserializer {
         if (pdcKeys == null) return null;
 
         final ItemStack item = ItemStack.of(material);
-        final ItemMeta meta = Bukkit.getItemFactory().getItemMeta(Material.NETHER_BRICK);
+        final ItemMeta meta = Bukkit.getItemFactory().getItemMeta(material);
 
         meta.displayName(displayName);
         meta.lore(lore);
