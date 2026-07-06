@@ -15,6 +15,8 @@ import ru.yolta.itemmanager.utils.UpdateChecker;
 
 public class ItemManager extends JavaPlugin {
 
+    private static final String PLUGIN_FULL_NAME = "CustomItemManager";
+    private static final String PLUGIN_SHORT_NAME = "CIM";
     private static final String MAIN_COMMAND_NAME = "itemmanager";
     private static final String PLUGIN_DOWNLOAD_LINK = "https://hangar.papermc.io/randomlychosenname/ItemManager/versions";
     private static ItemManagerApi api;
@@ -66,6 +68,14 @@ public class ItemManager extends JavaPlugin {
         Logger.getInstance().info(this, "Shut down successfully.");
 
         Logger.destroy();
+    }
+
+    public static @NotNull String getPluginShortName() {
+        return PLUGIN_SHORT_NAME;
+    }
+
+    public static @NotNull String getPluginFullName() {
+        return PLUGIN_FULL_NAME;
     }
 
     public static @NotNull ItemManagerApi getApi() {

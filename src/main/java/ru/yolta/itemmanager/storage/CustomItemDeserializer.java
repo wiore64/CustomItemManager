@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import ru.yolta.itemmanager.ItemManager;
 import ru.yolta.itemmanager.utils.Logger;
 
 import java.util.*;
@@ -24,6 +25,7 @@ final class CustomItemDeserializer {
 
     private static final String LOG_SOURCE = "CustomItemDeserializer";
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final NamespacedKey GENERAL_ITEM_KEY = new NamespacedKey(ItemManager.getPluginShortName().toLowerCase(Locale.ROOT), "item");
 
     private CustomItemDeserializer() {}
 
@@ -32,56 +34,38 @@ final class CustomItemDeserializer {
         final Material material = resolveMaterial(itemId, itemEntry.getString("material"));
         if (material == null) return null;
 
-        final Component displayName = resolveDisplayName(itemId, itemEntry.getString("display-name"));
-        if (displayName == null) return null;
-
-        final List<Component> lore = resolveLore(itemId, itemEntry.getList("lore"));
-        if (lore == null) return null;
-
-        final int customModelDataId = resolveCustomModelDataId(itemId, itemEntry.getInt("model-id", -1));
-
-        final Map<Enchantment, Integer> enchantments = resolveEnchantments(itemId, itemEntry.getList("enchantments"));
-        if (enchantments == null) return null;
-
-        final Map<Attribute, List<AttributeModifier>> attributes = resolveAttributes(itemId, itemEntry.getList("attributes"));
-        if (attributes == null) return null;
-
-        final Set<NamespacedKey> pdcKeys = resolvePersistentKeys(pluginName, itemId, itemEntry.getList("keys"));
-        if (pdcKeys == null) return null;
-
         final ItemStack item = ItemStack.of(material);
         final ItemMeta meta = Bukkit.getItemFactory().getItemMeta(material);
 
-        meta.displayName(displayName);
-        meta.lore(lore);
+        meta.customName(resolveDisplayName(itemId, itemEntry.getString("display-name")));
+        meta.lore(resolveLore(itemId, itemEntry.getStringList("lore")));
+        meta.setCustomModelData(resolveCustomModelDataId(itemId, itemEntry.getString("model-id")));
 
-        if (customModelDataId != -1) {
-            meta.setCustomModelData(customModelDataId);
-        }
-
-        for (final Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+        for (final var entry : resolveEnchantments(itemId, itemEntry.getList("enchantments")).entrySet()) {
             meta.addEnchant(entry.getKey(), entry.getValue(), true);
         }
 
-        for (final Map.Entry<Attribute, List<AttributeModifier>> entry : attributes.entrySet()) {
-            for (final AttributeModifier element : entry.getValue()) {
-                meta.addAttributeModifier(entry.getKey(), element);
+        for (final var entry : resolveAttributes(itemId, itemEntry.getList("attributes")).entrySet()) {
+            for (final var modifier : entry.getValue()) {
+                meta.addAttributeModifier(entry.getKey(), modifier);
             }
         }
 
         final PersistentDataContainer container = meta.getPersistentDataContainer();
-        for (final NamespacedKey key : pdcKeys) {
+
+        for (final NamespacedKey key : resolvePersistentKeys(pluginName, itemId, itemEntry.getStringList("keys"))) {
             container.set(key, PersistentDataType.BOOLEAN, true);
         }
 
         item.setItemMeta(meta);
+
         return item.serializeAsBytes();
     }
 
     private static Material resolveMaterial(String itemId, String materialName) {
         if (materialName == null) {
             Logger.getInstance().warn(LOG_SOURCE,
-                    "Item '%s' is missing required field: material".formatted(itemId)
+                    "Item '%s' missing required field: material".formatted(itemId)
             );
             return null;
         }
@@ -90,7 +74,7 @@ final class CustomItemDeserializer {
 
         if (material == null) {
             Logger.getInstance().warn(LOG_SOURCE,
-                    "Item '%s' has invalid material '%s'".formatted(itemId, materialName)
+                    "Item '%s' invalid material '%s'".formatted(itemId, materialName)
             );
             return null;
         }
@@ -99,66 +83,58 @@ final class CustomItemDeserializer {
     }
 
     private static Component resolveDisplayName(String itemId, String rawDisplayName) {
-        if (rawDisplayName == null) {
-            Logger.getInstance().warn(LOG_SOURCE,
-                    "Item '%s' is missing required field: display-name".formatted(itemId)
-            );
-            return null;
-        }
+        if (rawDisplayName == null) return null;
 
         return MINI_MESSAGE.deserialize("<!italic>" + rawDisplayName);
     }
 
-    private static List<Component> resolveLore(String itemId, List<?> rawLore) {
-        if (rawLore == null) {
-            Logger.getInstance().warn(LOG_SOURCE,
-                    "Item '%s' is missing required field: lore".formatted(itemId)
-            );
-            return null;
-        }
+    private static List<Component> resolveLore(String itemId, List<String> rawLore) {
+        if (rawLore == null) return null;
 
-        final List<Component> lore = new ArrayList<>();
+        final List<Component> lore = new ArrayList<>(rawLore.size());
 
-        for (final Object rawLine : rawLore) {
-            lore.add(MINI_MESSAGE.deserialize(String.valueOf(rawLine)));
+        for (final String rawLine : rawLore) {
+            lore.add(MINI_MESSAGE.deserialize(rawLine));
         }
 
         return lore;
     }
 
-    private static int resolveCustomModelDataId(String itemId, int modelDataId) {
-        return modelDataId;
-    }
+    private static Integer resolveCustomModelDataId(String itemId, String rawCustomModelDataId) {
+        if (rawCustomModelDataId == null) return null;
 
-    private static Map<Enchantment, Integer> resolveEnchantments(String itemId, List<?> rawEnchantments) {
-
-        if (rawEnchantments == null) {
-            Logger.getInstance().warn(LOG_SOURCE,
-                    "Item '%s' is missing enchantments section".formatted(itemId)
+        try {
+            return Integer.parseInt(rawCustomModelDataId.replace(" ", ""));
+        } catch (NumberFormatException e) {
+            Logger.getInstance().warn(
+                    LOG_SOURCE, "Item '%s' invalid custom model data ID: %s".formatted(itemId, rawCustomModelDataId)
             );
             return null;
         }
+    }
 
-        final Map<Enchantment, Integer> enchantments = new HashMap<>();
-        final Set<String> addedEnchantmentKeys = new HashSet<>();
+    private static Map<Enchantment, Integer> resolveEnchantments(String itemId, List<?> rawEnchantments) {
+        if (rawEnchantments == null) return Map.of();
+
+        final Map<Enchantment, Integer> enchantments = new HashMap<>(rawEnchantments.size());
+        final Set<String> addedEnchantmentKeys = new HashSet<>(rawEnchantments.size());
 
         for (final Object obj : rawEnchantments) {
-
-            if (!(obj instanceof final Map<?, ?> enchantmentMap)) {
+            if (!(obj instanceof final Map<?, ?> rawEnchantment)) {
                 Logger.getInstance().warn(LOG_SOURCE,
                         "Item '%s' invalid enchantment entry (not a map): %s".formatted(itemId, obj)
                 );
                 continue;
             }
 
-            if (!enchantmentMap.containsKey("name") || !enchantmentMap.containsKey("level")) {
+            if (!rawEnchantment.containsKey("name") || !rawEnchantment.containsKey("level")) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' enchantment entry missing 'name' or 'level': %s".formatted(itemId, enchantmentMap)
+                        "Item '%s' enchantment entry missing 'name' or 'level': %s".formatted(itemId, rawEnchantment)
                 );
                 continue;
             }
 
-            final String rawKey = String.valueOf(enchantmentMap.get("name"))
+            final String rawKey = String.valueOf(rawEnchantment.get("name"))
                     .strip()
                     .replace(" ", "_")
                     .toLowerCase(Locale.ROOT);
@@ -180,7 +156,7 @@ final class CustomItemDeserializer {
             }
 
             final NamespacedKey enchantmentKey = rawKeyParts.length == 1
-                    ? new NamespacedKey("minecraft", rawKeyParts[0])
+                    ? new NamespacedKey(NamespacedKey.MINECRAFT, rawKeyParts[0])
                     : new NamespacedKey(rawKeyParts[0], rawKeyParts[1]);
 
             final Enchantment enchantment = RegistryAccess.registryAccess()
@@ -189,13 +165,12 @@ final class CustomItemDeserializer {
 
             if (enchantment == null) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' unknown enchantment '%s'".formatted(itemId, rawKey)
+                        "Item '%s' enchantment not found: %s".formatted(itemId, rawKey)
                 );
                 continue;
             }
 
-            final String rawLevel = String.valueOf(enchantmentMap.get("level"))
-                    .strip()
+            final String rawLevel = String.valueOf(rawEnchantment.get("level"))
                     .replace(" ", "");
 
             final int level;
@@ -211,7 +186,7 @@ final class CustomItemDeserializer {
 
             if (level < 0 || level > 255) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' enchantment level %d for '%s' out of range (0-255), clamped".formatted(itemId, level, rawKey)
+                        "Item '%s' enchantment level %d for '%s' out of range (0-255). It was clamped.".formatted(itemId, level, rawKey)
                 );
             }
 
@@ -222,41 +197,34 @@ final class CustomItemDeserializer {
     }
 
     private static Map<Attribute, List<AttributeModifier>> resolveAttributes(String itemId, List<?> rawAttributes) {
-
-        if (rawAttributes == null) {
-            Logger.getInstance().warn(LOG_SOURCE,
-                    "Item '%s' is missing attributes section".formatted(itemId)
-            );
-            return null;
-        }
+        if (rawAttributes == null) return Map.of();
 
         final Map<Attribute, List<AttributeModifier>> attributes = new HashMap<>();
         final Set<String> addedAttributeKeys = new HashSet<>();
 
         for (final Object obj : rawAttributes) {
-
-            if (!(obj instanceof final Map<?, ?> map)) {
+            if (!(obj instanceof final Map<?, ?> rawAttribute)) {
                 Logger.getInstance().warn(LOG_SOURCE,
                         "Item '%s' invalid attribute entry (not a map): %s".formatted(itemId, obj)
                 );
                 continue;
             }
 
-            if (!map.containsKey("name") || !map.containsKey("modifiers")) {
+            if (!rawAttribute.containsKey("name") || !rawAttribute.containsKey("modifiers")) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' attribute missing 'name' or 'modifiers': %s".formatted(itemId, map)
+                        "Item '%s' attribute missing 'name' or 'modifiers': %s".formatted(itemId, rawAttribute)
                 );
                 continue;
             }
 
-            final String rawKey = String.valueOf(map.get("name"))
+            final String rawKey = String.valueOf(rawAttribute.get("name"))
                     .strip()
                     .replace(" ", "_")
                     .toLowerCase(Locale.ROOT);
 
             if (!addedAttributeKeys.add(rawKey)) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' duplicate attribute: '%s'".formatted(itemId, rawKey)
+                        "Item '%s' duplicate attribute: %s".formatted(itemId, rawKey)
                 );
                 continue;
             }
@@ -265,13 +233,13 @@ final class CustomItemDeserializer {
 
             if (rawKeyParts.length < 1 || rawKeyParts.length > 2) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' invalid attribute key '%s'".formatted(itemId, rawKey)
+                        "Item '%s' invalid attribute key: %s".formatted(itemId, rawKey)
                 );
                 continue;
             }
 
             final NamespacedKey attributeKey = rawKeyParts.length == 1
-                    ? new NamespacedKey("minecraft", rawKeyParts[0])
+                    ? new NamespacedKey(NamespacedKey.MINECRAFT, rawKeyParts[0])
                     : new NamespacedKey(rawKeyParts[0], rawKeyParts[1]);
 
             final Attribute attribute = RegistryAccess.registryAccess()
@@ -280,12 +248,12 @@ final class CustomItemDeserializer {
 
             if (attribute == null) {
                 Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' unknown attribute '%s'".formatted(itemId, rawKey)
+                        "Item '%s' attribute not found: %s".formatted(itemId, rawKey)
                 );
                 continue;
             }
 
-            final Object supposedRawModifiers = map.get("modifiers");
+            final Object supposedRawModifiers = rawAttribute.get("modifiers");
 
             if (!(supposedRawModifiers instanceof final List<?> rawModifiers)) {
                 Logger.getInstance().warn(LOG_SOURCE,
@@ -354,11 +322,18 @@ final class CustomItemDeserializer {
                     continue;
                 }
 
-                modifiers.add(new AttributeModifier(new NamespacedKey("minecraft", UUID.randomUUID().toString()),
+                modifiers.add(new AttributeModifier(new NamespacedKey(NamespacedKey.MINECRAFT, UUID.randomUUID().toString()),
                         amount,
                         operation,
                         slotGroup
                 ));
+            }
+
+            if (modifiers.isEmpty()) {
+                Logger.getInstance().warn(LOG_SOURCE,
+                        "Item '%s' attribute '%s' has no modifiers.".formatted(itemId, attributeKey)
+                );
+                continue;
             }
 
             attributes.put(attribute, modifiers);
@@ -367,48 +342,47 @@ final class CustomItemDeserializer {
         return attributes;
     }
 
-    private static Set<NamespacedKey> resolvePersistentKeys(String pluginName, String itemId, List<?> rawKeys) {
-        if (rawKeys == null) {
-            Logger.getInstance().warn(
-                    LOG_SOURCE, "Item '%s' missing persistent keys section".formatted(itemId)
+    private static Set<NamespacedKey> resolvePersistentKeys(String pluginName, String itemId, List<String> rawKeys) {
+        if (rawKeys == null) return Set.of();
+
+        final Set<NamespacedKey> keys = new HashSet<>();
+
+        for (final String rawKey : rawKeys) {
+            final String[] rawKeyParts = rawKey
+                    .strip()
+                    .replace(" ", "_")
+                    .toLowerCase(Locale.ROOT)
+                    .split(":");
+
+            if (rawKeyParts.length < 1 || rawKeyParts.length > 2) {
+                Logger.getInstance().warn(LOG_SOURCE,
+                        "Item '%s' invalid persistent key format (expected namespace:key or key): %s".formatted(itemId, rawKey)
+                );
+                continue;
+            }
+
+            final NamespacedKey key = rawKeyParts.length == 1
+                    ? new NamespacedKey(pluginName, rawKeyParts[0])
+                    : new NamespacedKey(rawKeyParts[0], rawKeyParts[1]);
+
+            if (!keys.add(key)) {
+                Logger.getInstance().warn(LOG_SOURCE,
+                        "Item '%s' duplicate persistent key: %s".formatted(itemId, key.toString())
+                );
+            }
+        }
+
+        return keys;
+    }
+
+    private UUID resolveInternalId(String itemId, String value) {
+        if (value == null) {
+            Logger.getInstance().warn(LOG_SOURCE,
+                    "Failed to resolve internal ID of '%s': Not found. A new one will be generated. If you deleted it, please undo the action."
             );
             return null;
         }
 
-        final Set<NamespacedKey> keys = new HashSet<>();
-        final Set<String> addedKeys = new HashSet<>();
-
-        for (final Object rawKey : rawKeys) {
-
-            final String rawKeyString = String.valueOf(rawKey)
-                    .strip()
-                    .replace(" ", "_")
-                    .toLowerCase(Locale.ROOT);
-
-            if (!addedKeys.add(rawKeyString)) {
-                Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' duplicate persistent key: '%s'".formatted(itemId, rawKeyString)
-                );
-                continue;
-            }
-
-            final String[] rawKeyParts = rawKeyString.split(":");
-
-            if (rawKeyParts.length < 1 || rawKeyParts.length > 2) {
-                Logger.getInstance().warn(LOG_SOURCE,
-                        "Item '%s' invalid persistent key format (expected namespace:key): '%s'".formatted(itemId, rawKeyString)
-                );
-                continue;
-            }
-
-            if (rawKeyParts.length == 1) {
-                keys.add(new NamespacedKey(pluginName, rawKeyParts[0]));
-                continue;
-            }
-
-            keys.add(new NamespacedKey(rawKeyParts[0], rawKeyParts[1]));
-        }
-
-        return keys;
+        return UUID.fromString(value);
     }
 }

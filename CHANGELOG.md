@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a first basic test.
+- Now all fields are optional except material.
+- Now if an attribute has no modifiers, the plugin will warn about it.
 
 ### Changed
 
