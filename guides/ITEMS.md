@@ -1,6 +1,6 @@
-# Configuring a Custom Item
+# Configuring a Custom Item | 2026-07-06
 
-This guide explains how a **custom item** is defined in ``items.yml``. Most of the fields are **mandatory**, but **may be left empty**, so _you only need to set what you actually want to customize_.
+This guide explains how a **custom item** is defined in ``items.yml``. The only two **required fields** are **material and internal ID**, where the _latter one is handled automatically_.
 
 If you're ever **unsure** about a value (_such as a material name or an attribute key_), check _**one of the related links below**_. They point to the **official Paper documentation** for your server version.
 
@@ -24,9 +24,6 @@ example_item:
   material: DIRT
   display-name: <brown>Mythic Dirt</brown>
   lore: [ "A crazy story behind it..." ]
-  enchantments: []
-  attributes: []
-  keys: []
 ```
 
 ## An Advanced Example
@@ -62,6 +59,18 @@ example_item:
 
 ## Fields
 
+### `internal-id`
+
+An internal ID managed by the plugin.
+
+```yaml
+internal-id: 123e4567-e89b-12d3-a456-426614174000
+```
+
+This is not to be modified. It is injected by the manager automatically. Its pure purpose is to allow tracking of the 
+items issued by the plugin later on. Each custom item is issued such an ID upon creation, and exists only for internal use.
+Modifying it will lead to a generation of a new ID, and thus, all previous items related to it will not be linked anymore.
+
 ### `material`
 
 The base Minecraft item. Must be specified.
@@ -76,21 +85,20 @@ Use the material names from the Paper API documentation for your server version.
 
 ### `name`
 
-The item's display name.
+The item's display name. Optional.
 
 ```yaml
 display-name: <#F55E27><bold>Copper sword</bold></#F55E27>
 ```
 
-Supports MiniMessage formatting. As of now, when item with default name added via a command, ItemManager uses its 
-translatable key, making it vary depending on the set language of your client. Also, if you try to add the same
-item multiple times, its color codes may stack up. Not the ones set by you manually, however.
+Supports MiniMessage formatting. As of now, when item with default name added via a command, ItemManager uses the item's 
+translatable key, making it vary depending on the set language of your client.
 
 ---
 
 ### `lore`
 
-The item's lore.
+The item's lore. Optional.
 
 ```yaml
 lore:
@@ -98,19 +106,19 @@ lore:
   - <yellow>Handle with care.
 ```
 
-Supports MiniMessage formatting. Default is italic, light purple style.
+Supports MiniMessage formatting.
 
 ---
 
 ### `model-id`
 
-The item's model ID.
+The item's model ID. Optional.
 
 ```yaml
-model-id: -1
+model-id: 1001
 ```
 
-Used for resource packs to define the item's custom model data. Optional field. -1 means none.
+Used for resource packs to define the item's custom model data.
 
 ---
 
@@ -126,7 +134,7 @@ enchantments:
     level: 3
 ```
 
-Allows unsafe enchantment combinations and unsafe enchantment levels (0 to 255).
+Allows unsafe enchantment combinations and unsafe enchantment levels (0 to 255). Illegal levels are clamped.
 
 ---
 
@@ -162,7 +170,7 @@ keys:
   - key
 ```
 
-If plugin is not clarified, ItemManager is used as the namespace instead.
+If namespace is not clarified, ItemManager is used as the namespace instead.
 
 ## End
 
