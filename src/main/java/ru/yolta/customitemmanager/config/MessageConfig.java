@@ -1,7 +1,11 @@
 package ru.yolta.customitemmanager.config;
 
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.NotNull;
+import ru.yolta.customitemmanager.utils.Logger;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +28,9 @@ public record MessageConfig(
     @NotNull String itemUnregistered,
     @NotNull String pluginHelp
 ) {
-    static final Map<String, String> DEFAULT_VALUES;
+
+    private static final Map<String, String> DEFAULT_VALUES;
+    private static boolean shouldSaveConfig = false;
 
     static {
         final Map<String, String> map = new HashMap<>();
@@ -52,5 +58,66 @@ public record MessageConfig(
         map.put("plugin-reloaded", "<green>Plugin reloaded.</green>");
 
         DEFAULT_VALUES = Map.copyOf(map);
+    }
+
+    static @NotNull MessageConfig parseMessageConfig(@NotNull ConfigManager manager, @NotNull File file, @NotNull FileConfiguration fileConfig) {
+        final int configVersion = fileConfig.getInt("config-version", -1);
+
+        if (configVersion == -1) {
+            Logger.info(MessageConfig.class, "Your config has been updated to include 'config-version'.");
+
+            fileConfig.set("config-version", 1);
+        }
+
+        final ConfigurationSection section = fileConfig.getConfigurationSection("messages");
+
+        if (section == null) {
+            Logger.warn(MessageConfig.class, "Failed to parse section 'messages': Not found.");
+
+            shouldSaveConfig = true;
+            fileConfig.createSection("messages");
+        }
+
+        final var config = new MessageConfig(
+                getValue(fileConfig, "prefix", DEFAULT_VALUES.get("prefix")),
+                getValue(section, "no-permission", DEFAULT_VALUES.get("no-permission")),
+                getValue(section, "invalid-arguments", DEFAULT_VALUES.get("invalid-arguments")),
+                getValue(section, "invalid-command", DEFAULT_VALUES.get("invalid-command")),
+                getValue(section, "player-only-command", DEFAULT_VALUES.get("player-only-command")),
+                getValue(section, "must-hold-item", DEFAULT_VALUES.get("must-hold-item")),
+                getValue(section, "item-already-registered", DEFAULT_VALUES.get("item-already-registered")),
+                getValue(section, "item-not-found", DEFAULT_VALUES.get("item-not-found")),
+                getValue(section, "player-not-found", DEFAULT_VALUES.get("player-not-found")),
+                getValue(section, "invalid-amount", DEFAULT_VALUES.get("invalid-amount")),
+                getValue(section, "item-registered", DEFAULT_VALUES.get("item-registered")),
+                getValue(section, "item-unregistered", DEFAULT_VALUES.get("item-unregistered")),
+                getValue(section, "item-given", DEFAULT_VALUES.get("item-given")),
+                getValue(section, "plugin-description", DEFAULT_VALUES.get("plugin-description")),
+                getValue(section, "plugin-help", DEFAULT_VALUES.get("plugin-help")),
+                getValue(section, "item-list", DEFAULT_VALUES.get("item-list")),
+                getValue(section, "plugin-reloaded", DEFAULT_VALUES.get("plugin-reloaded"))
+        );
+
+        if (shouldSaveConfig) {
+            shouldSaveConfig = false;
+            manager.saveConfig(file, fileConfig);
+        }
+
+        return config;
+    }
+
+    private static String getValue(ConfigurationSection section, String key, String defValue) {
+        final String value = section.getString(key);
+
+        if (value == null) {
+            Logger.warn(MessageConfig.class, "Failed to parse '{}': Not found.", key);
+
+            shouldSaveConfig = true;
+            section.set(key, defValue);
+
+            return defValue;
+        }
+
+        return value;
     }
 }
