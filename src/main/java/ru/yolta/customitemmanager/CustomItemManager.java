@@ -1,5 +1,6 @@
 package ru.yolta.customitemmanager;
 
+import org.apache.logging.log4j.Level;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -23,11 +24,11 @@ public class CustomItemManager extends JavaPlugin {
     
     @Override
     public void onEnable() {
-        Logger.getInstance().info(this, "Loading up...");
+        Logger.info(this, "Loading up...");
 
         final ConfigManager configManager = new ConfigManager(this);
 
-        Logger.getInstance().setLevel(configManager.getGeneralConfig().loggingLevel());
+        Logger.setLevel(configManager.getGeneralConfig().loggingLevel());
         Messenger.setPrefix(configManager.getMessageConfig().prefix());
 
         final CustomItemStorage itemStorage = new CustomItemStorage(this);
@@ -48,7 +49,7 @@ public class CustomItemManager extends JavaPlugin {
 
         checkUpdates();
 
-        Logger.getInstance().info(this, "Loaded successfully.");
+        Logger.info(this, "Loaded successfully.");
     }
 
     private void checkUpdates() {
@@ -68,15 +69,15 @@ public class CustomItemManager extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        Logger.getInstance().info(this, "Shutting down...");
+        Logger.info(this, "Shutting down...");
 
         Messenger.setPrefix(null);
 
         api = null;
 
-        Logger.getInstance().info(this, "Shut down successfully.");
+        Logger.info(this, "Shut down successfully.");
 
-        Logger.destroy();
+        Logger.setLevel(Level.INFO);
     }
 
     public static @NotNull CustomItemManagerApi getApi() {

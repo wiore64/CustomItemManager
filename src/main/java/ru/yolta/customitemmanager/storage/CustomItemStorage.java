@@ -31,7 +31,7 @@ public final class CustomItemStorage {
     // HIDDEN RELATIONSHIP -- END
 
     public CustomItemStorage(@NotNull CustomItemManager plugin) {
-        Logger.getInstance().debug(this, "Initializing...");
+        Logger.debug(this, "Initializing...");
 
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), FILE_STORAGE_NAME);
@@ -42,7 +42,7 @@ public final class CustomItemStorage {
 
         refreshItemRegistry(getItemConfig(configFile));
 
-        Logger.getInstance().debug(this, "Initialized successfully.");
+        Logger.debug(this, "Initialized successfully.");
     }
 
     private void refreshItemRegistry(FileConfiguration itemConfig) {
@@ -53,7 +53,7 @@ public final class CustomItemStorage {
             
             final ConfigurationSection section = itemConfig.getConfigurationSection(itemId);
             if (section == null) {
-                Logger.getInstance().warn(this, "Item '%s' is not a config section.".formatted(itemId));
+                Logger.warn(this, "Item '%s' is not a config section.", itemId);
                 continue;
             }
 
@@ -63,7 +63,7 @@ public final class CustomItemStorage {
                     section
             );
             if (parsedItemData == null) {
-                Logger.getInstance().warn(this, "Failed to parse '%s'.".formatted(itemId));
+                Logger.warn(this, "Failed to parse '%s'.", itemId);
                 continue;
             }
 
@@ -87,7 +87,7 @@ public final class CustomItemStorage {
 
         final Set<String> sectionToCopyFromKeys = sectionToCopyFrom.getKeys(true);
         if (sectionToCopyFromKeys.isEmpty()) {
-            Logger.getInstance().warn(this, "Failed to serialize '%s' into section.".formatted(itemId));
+            Logger.warn(this, "Failed to serialize '%s' into section.", itemId);
             return false;
         }
 
@@ -136,13 +136,13 @@ public final class CustomItemStorage {
 
             config.save(configFile);
         } catch (IOException e) {
-            Logger.getInstance().error(this, "Failed to save file configuration to '%s'.".formatted(FILE_STORAGE_NAME), e);
+            Logger.error(this, "Failed to save file configuration to '%s'.", e, FILE_STORAGE_NAME);
         }
     }
 
     private void ensureConfigFileExists() {
         if (!configFile.exists()) {
-            Logger.getInstance().info(this, "'%s' does not exist. A default one will be created.".formatted(FILE_STORAGE_NAME));
+            Logger.info(this, "'%s' does not exist. A default one will be created.", FILE_STORAGE_NAME);
             plugin.saveResource(FILE_STORAGE_NAME, false);
         }
     }

@@ -19,19 +19,19 @@ public final class ConfigManager {
     private final MessageConfig messageConfig;
 
     public ConfigManager(@NotNull CustomItemManager plugin) {
-        Logger.getInstance().debug(this, "Initializing...");
+        Logger.debug(this, "Initializing...");
 
         this.generalConfig = parseGeneralConfig(new File(plugin.getDataFolder(), GENERAL_CONFIG_FILE_NAME), getGeneralFileConfig(plugin));
         this.messageConfig = parseMessageConfig(new File(plugin.getDataFolder(), MESSAGE_CONFIG_FILE_NAME), getMessageFileConfig(plugin));
 
-        Logger.getInstance().debug(this, "Initialized successfully.");
+        Logger.debug(this, "Initialized successfully.");
     }
 
     private FileConfiguration getGeneralFileConfig(CustomItemManager plugin) {
         final File configFile = new File(plugin.getDataFolder(), GENERAL_CONFIG_FILE_NAME);
 
         if (!configFile.exists()) {
-            Logger.getInstance().info(this, "'%s' does not exist. A default one will be created.".formatted(GENERAL_CONFIG_FILE_NAME));
+            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(GENERAL_CONFIG_FILE_NAME));
             plugin.saveResource(GENERAL_CONFIG_FILE_NAME, false);
         }
 
@@ -50,7 +50,7 @@ public final class ConfigManager {
         final File configFile = new File(plugin.getDataFolder(), MESSAGE_CONFIG_FILE_NAME);
 
         if (!configFile.exists()) {
-            Logger.getInstance().info(this, "'%s' does not exist. A default one will be created.".formatted(MESSAGE_CONFIG_FILE_NAME));
+            Logger.info(this, "'%s' does not exist. A default one will be created.".formatted(MESSAGE_CONFIG_FILE_NAME));
             plugin.saveResource(MESSAGE_CONFIG_FILE_NAME, false);
         }
 
@@ -69,7 +69,7 @@ public final class ConfigManager {
         int configVersion = config.getInt("config-version", -1);
 
         if (configVersion == -1) {
-            Logger.getInstance().warn(ConfigManager.class, "Failed to parse config version: Not found or invalid version. It will be fixed for you.");
+            Logger.warn(ConfigManager.class, "Failed to parse config version: Not found or invalid version. It will be fixed for you.");
             config.set("config-version", 1);
             saveGeneralFileConfig(file, config);
             configVersion = 1;
@@ -80,7 +80,7 @@ public final class ConfigManager {
         boolean isSectionExist = true;
 
         if (section == null) {
-            Logger.getInstance().warn(ConfigManager.class, "Failed to find the section for settings. A new one will be created.");
+            Logger.warn(ConfigManager.class, "Failed to find the section for settings. A new one will be created.");
             isSectionExist = false;
             section = config.createSection("settings");
         }
@@ -92,7 +92,7 @@ public final class ConfigManager {
         final String levelName = section.getString("logging-level");
 
         if (levelName == null) {
-            Logger.getInstance().warn(this, "Failed to parse logging level in '%s': Level not found.".formatted(GENERAL_CONFIG_FILE_NAME));
+            Logger.warn(this, "Failed to parse logging level in '%s': Level not found.".formatted(GENERAL_CONFIG_FILE_NAME));
             section.set("logging-level", "INFO");
             saveGeneralFileConfig(file, config);
             return new GeneralConfig(Logger.LogLevel.INFO);
@@ -100,7 +100,7 @@ public final class ConfigManager {
 
         final Logger.LogLevel level = Logger.LogLevel.getLogLevel(levelName);
         if (level == null) {
-            Logger.getInstance().warn(this, "Failed to parse logging level: Invalid level '%s'.".formatted(levelName));
+            Logger.warn(this, "Failed to parse logging level: Invalid level '%s'.".formatted(levelName));
             return new GeneralConfig(Logger.LogLevel.INFO);
         }
 
@@ -111,7 +111,7 @@ public final class ConfigManager {
         ConfigurationSection section = fileConfig.getConfigurationSection("messages");
 
         if (section == null) {
-            Logger.getInstance().warn(ConfigManager.class, "Failed to find the section for messages. A new one will be created for you.");
+            Logger.warn(ConfigManager.class, "Failed to find the section for messages. A new one will be created for you.");
             section = fileConfig.createSection("messages");
         }
 
@@ -144,7 +144,7 @@ public final class ConfigManager {
         final String value = section.getString(key);
 
         if (value == null) {
-            Logger.getInstance().warn(this, "Failed to parse '%s' in '%s': Value not found. Using default.".formatted(key, MESSAGE_CONFIG_FILE_NAME));
+            Logger.warn(this, "Failed to parse '%s' in '%s': Value not found. Using default.".formatted(key, MESSAGE_CONFIG_FILE_NAME));
 
             final String defValue = MessageConfig.DEFAULT_VALUES.get(key);
 
