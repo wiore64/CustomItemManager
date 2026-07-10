@@ -24,7 +24,7 @@ public class CustomItemManager extends JavaPlugin {
     
     @Override
     public void onEnable() {
-        Logger.info(this, "Loading up...");
+        Logger.info(PLUGIN_NAME, "Loading up...");
 
         final ConfigProvider configProvider = new ConfigProvider(this);
 
@@ -49,17 +49,32 @@ public class CustomItemManager extends JavaPlugin {
 
         checkUpdates();
 
-        Logger.info(this, "Loaded successfully.");
+        Logger.info(PLUGIN_NAME, "Loaded successfully.");
     }
 
     private void checkUpdates() {
         final UpdateChecker.UpdateCheckResult result = UpdateChecker.checkUpdates(getPluginMeta().getVersion());
+
         if (!result.hasUpdate()) {
-            // log all good
+            Logger.info(PLUGIN_NAME, "You're up to date!");
             return;
         }
 
-        // Say you are not up-to-date.
+        switch (result.type()) {
+            case MAJOR -> Logger.info(PLUGIN_NAME,
+                    "You're missing a major update! Your version: {}; Latest version: {}. Download link: {}",
+                    result.currVer(), result.lastVer(), getPluginMeta().getWebsite());
+
+            case MINOR -> Logger.info(PLUGIN_NAME,
+                    "You're missing a minor update! Your version: {}; Latest version: {}. Download link: {}",
+                    result.currVer(), result.lastVer(), getPluginMeta().getWebsite());
+
+            case PATCH -> Logger.info(PLUGIN_NAME,
+                    "You're missing a patch! Your version: {}; Latest version: {}. Download link: {}",
+                    result.currVer(), result.lastVer(), getPluginMeta().getWebsite());
+
+            default -> throw new IllegalArgumentException("Invalid update type: " + result.type());
+        }
     }
 
     public void onReload() {
@@ -69,13 +84,13 @@ public class CustomItemManager extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        Logger.info(this, "Shutting down...");
+        Logger.info(PLUGIN_NAME, "Shutting down...");
 
         Messenger.setPrefix("");
 
         api = null;
 
-        Logger.info(this, "Shut down successfully.");
+        Logger.info(PLUGIN_NAME, "Shut down successfully.");
 
         Logger.setLevel(Level.INFO);
     }
