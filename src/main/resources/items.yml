@@ -23,7 +23,7 @@
 # A Basic Example
 # example_item:
 #   material: DIRT
-#   display-name: <brown>Mythic Dirt</brown>
+#   display-name: <light_purple>Mythic Dirt</light_purple>
 #   lore: [ "A crazy story behind it..." ]
 
 # An Advanced Example
