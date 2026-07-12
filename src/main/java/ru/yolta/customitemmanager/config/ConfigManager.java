@@ -25,7 +25,7 @@ public final class ConfigManager {
         ensureFileExists(messageConfigFile, false);
         this.messageConfig = MessageConfig.parseMessageConfig(this, messageConfigFile, getFileConfig(messageConfigFile));
 
-        GuideFiles.overwriteGuides(plugin, this);
+        GuideFiles.saveGuides(this);
 
         Logger.debug(this, "Initialized successfully.");
     }
