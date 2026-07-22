@@ -19,7 +19,13 @@ public final class CustomItemManager extends JavaPlugin {
 
     public static final String PLUGIN_NAME = "CustomItemManager";
     private static CustomItemManagerApi api;
-    
+
+    public static @NotNull CustomItemManagerApi getApi() {
+        if (api == null)
+            throw new IllegalStateException("Accessed API before it was initialized.");
+        return api;
+    }
+
     @Override
     public void onEnable() {
         Logger.info(PLUGIN_NAME, "Hello! Loading up...");
@@ -35,10 +41,11 @@ public final class CustomItemManager extends JavaPlugin {
         api = new CustomItemManagerApi(this, itemStorage, itemBuilder);
 
         final var commandService = new CommandService(configManager.getMessageConfig());
-        final var commandHandler = new CustomItemManagerCommand(commandService, configManager.getMessageConfig());
+        final var commandHandler = new CustomItemManagerCommand(commandService, configManager.getMessageConfig().mainCmd());
 
         final PluginCommand command = this.getCommand("customitemmanager");
-        if (command == null) throw new IllegalStateException("Failed to find command in 'plugin.yml': customitemmanager");
+        if (command == null)
+            throw new IllegalStateException("Failed to find command in 'plugin.yml': customitemmanager");
 
         command.setExecutor(commandHandler);
         command.setTabCompleter(commandHandler);
@@ -83,7 +90,8 @@ public final class CustomItemManager extends JavaPlugin {
         Logger.info(PLUGIN_NAME, "Shutting down...");
 
         final PluginCommand command = this.getCommand("customitemmanager");
-        if (command == null) throw new IllegalStateException("Failed to find command in 'plugin.yml': customitemmanager");
+        if (command == null)
+            throw new IllegalStateException("Failed to find command in 'plugin.yml': customitemmanager");
 
         command.setExecutor(null);
         command.setTabCompleter(null);
@@ -94,11 +102,5 @@ public final class CustomItemManager extends JavaPlugin {
         api = null;
 
         Logger.info(PLUGIN_NAME, "Shut down successfully. Bye!");
-    }
-
-    public static @NotNull CustomItemManagerApi getApi() {
-        if (api == null) 
-            throw new IllegalStateException("Accessed API before it was initialized.");
-        return api;
     }
 }
