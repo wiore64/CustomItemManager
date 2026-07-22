@@ -5,27 +5,67 @@
 # Learn more about formatting using MiniMessage: https://docs.papermc.io/adventure/minimessage/format/
 # Don't know the supported placeholders? Check here: https://github.com/wiore64/CustomItemManager/blob/main/guides/PLACEHOLDERS.md
 
-config-version: 1 # DO NOT MODIFY
-
-prefix: "<gradient:#F47854:#B67E54>[CIM]:</gradient>"
+config-version: 2 # DO NOT MODIFY
 
 messages:
-  no-permission: "<red>You do not have permission to run this command!</red>"
-  invalid-arguments: "<red>Invalid arguments.</red> Usage: <gold>{USAGE}</gold>" # Placeholders: {USAGE}
-  invalid-command: "<red>Unknown command.<red> Use <gold>/cim help.</gold>"
-  player-only-command: "<red>This command can only be used by players.</red>"
+  prefix: "<gradient:#F47854:#B67E54>[CIM]:</gradient>"
 
-  must-hold-item: "<gold>You must be holding an item.</gold>"
-  item-already-registered: "<gold>Item {ITEM} is already registered.</gold>"         # Placeholders: {ITEM}
-  item-not-found: "<gold>Item {ITEM} was not found.</gold>"                          # Placeholders: {ITEM}
-  player-not-found: "<gold>Player {PLAYER} was not found.</gold>"                    # Placeholders: {PLAYER}
-  invalid-amount: "<gold>Invalid amount {AMOUNT}. Must be a positive integer.</gold" # Placeholders: {AMOUNT}
+  main-cmd:
+    no-permission: "<red>You do not have permission to run this command!</red>"
+    plugin-description: "A <gold>powerful and centralized</gold> custom <aqua>item management</aqua> plugin."
+    invalid-command: "<red>Unknown command.<red> Use <gold>/cim help.</gold>"
 
-  item-registered: "<green>Item {ITEM} registered.</green>"       # Placeholders: {ITEM}
-  item-unregistered: "<green>Item {ITEM} unregistered.</green>"   # Placeholders: {ITEM}
-  item-given: "<green>Gave {AMOUNT}x {ITEM} to {PLAYER}.</green>" # Placeholders: {AMOUNT}, {ITEM}, {PLAYER}
+  shared-cmd:
+    player-only-command: "<red>This command can only be used by players.</red>"
+    invalid-arguments: "<red>Invalid arguments.</red> Usage: <gold>{USAGE}</gold>" # Placeholders: {USAGE}
+    must-hold-item: "<gold>You must be holding an item.</gold>"
 
-  plugin-description: "A <gold>powerful and centralized</gold> custom <aqua>item management</aqua> plugin."
-  plugin-help: "List of commands: <gold>\n/cim add <key>: Adds a new item held in your hand with key serving as identifier\n/cim remove <key>: Removes the specified item\n/cim give <player> <key> [amount]: Gives item to player in the specified amount\n/cim list: Lists all currently registered items\n/cim reload: Reloads the plugin\n/cim help: Reveals this message"
-  item-list: "Registered items: <gold>{ITEMS}</gold>" # Placeholders: {ITEMS}
-  plugin-reloaded: "<green>Plugin reloaded.</green>"
+  add-item-cmd:
+    item-registered: "<green>Item {ITEM} registered.</green>" # Placeholders: {ITEM}
+    item-already-registered: "<gold>Item {ITEM} is already registered.</gold>" # Placeholders: {ITEM}
+
+  remove-item-cmd:
+    item-unregistered: "<green>Item {ITEM} unregistered.</green>" # Placeholders: {ITEM}
+    item-not-registered: "<gold>Item {ITEM} is not registered.</gold>" # Placeholders: {ITEM}
+
+  give-item-cmd:
+    player-not-found: "<gold>Player {PLAYER} was not found.</gold>" # Placeholders: {PLAYER}
+    item-not-found: "<gold>Item {ITEM} was not found.</gold>" # Placeholders: {ITEM}
+    invalid-item-amount: "<gold>Invalid amount {AMOUNT}. Must be a positive integer.</gold>" # Placeholders: {AMOUNT}
+    item-given: "<green>Gave {AMOUNT}x {ITEM} to {PLAYER}.</green>" # Placeholders: {AMOUNT}, {ITEM}, {PLAYER}
+
+  reload-plugin-cmd:
+    plugin-reloaded: "<green>Plugin reloaded.</green>"
+
+  help-plugin-cmd:
+    plugin-help: "List of commands: <gold>\n/cim add <key>: Adds a new item held in your hand with key serving as identifier\n/cim remove <key>: Removes the specified item\n/cim give <player> <key> [amount]: Gives item to player in the specified amount\n/cim list: Lists all currently registered items\n/cim reload: Reloads the plugin\n/cim help: Reveals this message"
+
+  manage-item-cmd:
+    name-updated: "<green>This item's name was updated.</green>"
+    name-cleared: "<green>This item's name was cleared.</green>"
+
+    lore-line-appended: "<green>This item's lore line was added.</green>"
+    lore-bad-index: "<red>This item's lore line {INDEX} is invalid. Lore lines must be between 1 and {MAX_INDEX}.</red>" # Placeholders: {INDEX}, {MAX_INDEX}
+    lore-large-index: "<red>This item's lore line {INDEX} is invalid. The maximum lore line is {MAX_INDEX}.</red>" # Placeholders: {INDEX}, {MAX_INDEX}
+    lore-line-updated: "<green>This item's lore line was updated.</green>"
+    lore-line-removed: "<green>This item's lore line was removed.</green>"
+    lore-cleared: "<green>This item's lore was cleared.</green>"
+
+    model-updated: "<green>This item's model was updated.</green>"
+    model-cleared: "<green>This item's model was cleared.</green>"
+    invalid-model-id: "<red>This item's model id {MODEL} is invalid.</red>" # Placeholders: {MODEL}
+
+    unknown-enchantment: "<red>This item does not have the enchantment {ENCHANTMENT}.</red>" # Placeholders: {ENCHANTMENT}
+    invalid-enchantment-level: "<red>Enchantment levels must be between 0 and 255.</red>" # Placeholders: {LEVEL}
+    out-of-bounds-enchantment-level: "<red>Enchantment level {LEVEL} must be between 0 and 255.</red>" # Placeholders: {LEVEL}
+    enchantment-already-present: "<red>This item already has the enchantment {ENCHANTMENT} at level {LEVEL}.</red>" # Placeholders: {ENCHANTMENT}, {LEVEL}
+    enchantment-not-present: "<red>This item does not have the enchantment {ENCHANTMENT}.</red>" # Placeholders: {ENCHANTMENT}
+    enchantment-updated: "<green>This item's enchantment was updated.</green>"
+    enchantment-removed: "<green>This item's enchantment was removed.</green>"
+    enchantments-cleared: "<green>This item's enchantments were cleared.</green>"
+
+    invalid-key: "<red>This item's key {KEY} is invalid.</red>" # Placeholders: {KEY}
+    duplicate-key: "<red>This item already has the key {KEY}.</red>" # Placeholders: {KEY}
+    key-not-found: "<red>This item's key {KEY} was not found.</red>" # Placeholders: {KEY}
+    key-added: "<green>This item's key was added.</green>"
+    key-removed: "<green>This item's key was removed.</green>"

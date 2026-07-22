@@ -20,16 +20,21 @@ public final class RemoveItem implements SubCommand {
 
     private static final Set<String> ALIASES = Set.of("remove");
     private static final Permission PERMISSION = new Permission("customitemmanager.command.remove");
-    private final MessageConfig messages;
+    private final MessageConfig.SharedCmdSection sharedMessages;
+    private final MessageConfig.RemoveItemCmdSection cmdMessages;
 
-    public RemoveItem(@NotNull MessageConfig messages) {
-        this.messages = messages;
+    public RemoveItem(
+            @NotNull MessageConfig.SharedCmdSection sharedMessages,
+            @NotNull MessageConfig.RemoveItemCmdSection cmdMessages
+    ) {
+        this.sharedMessages = sharedMessages;
+        this.cmdMessages = cmdMessages;
     }
 
     @Override
     public void onCommand(@NotNull CommandSender sender, @NotNull String @NotNull [] args) {
         if (args.length != 2) {
-            Messenger.sendMessage(sender, messages.invalidArguments(), Map.of("USAGE", "/cim remove <name>"));
+            Messenger.sendMessage(sender, sharedMessages.invalidArguments(), Map.of("USAGE", "/cim remove <name>"));
             return;
         }
 
@@ -37,9 +42,9 @@ public final class RemoveItem implements SubCommand {
 
         Future.runAsyncTask(() -> CustomItemManager.getApi().unregisterCustomItem(itemName), success -> {
             if (success) {
-                Messenger.sendMessage(sender, messages.itemUnregistered(), Map.of("ITEM", itemName));
+                Messenger.sendMessage(sender, cmdMessages.itemUnregistered(), Map.of("ITEM", itemName));
             } else {
-                Messenger.sendMessage(sender, messages.itemNotFound(), Map.of("ITEM", itemName));
+                Messenger.sendMessage(sender, cmdMessages.itemNotRegistered(), Map.of("ITEM", itemName));
             }
         });
     }

@@ -1,55 +1,54 @@
 package ru.yolta.customitemmanager.command;
 
-import java.util.List;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
 import ru.yolta.customitemmanager.config.MessageConfig;
 import ru.yolta.customitemmanager.utils.Messenger;
+
+import java.util.List;
 
 public final class CustomItemManagerCommand implements TabExecutor {
 
     private static final String PRIMARY_PERMISSION = "customitemmanager.command";
     private final CommandService service;
-    private final MessageConfig messages;
+    private final MessageConfig.MainCmdSection cmdMessages;
 
-    public CustomItemManagerCommand(@NotNull CommandService service, @NotNull MessageConfig messages) {
+    public CustomItemManagerCommand(@NotNull CommandService service, @NotNull MessageConfig.MainCmdSection cmdMessages) {
         this.service = service;
-        this.messages = messages;
+        this.cmdMessages = cmdMessages;
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         if (!sender.hasPermission(PRIMARY_PERMISSION)) {
-            Messenger.sendMessage(sender, messages.noPermission());
+            Messenger.sendMessage(sender, cmdMessages.noPermission());
             return true;
         }
-        
+
         if (args.length == 0) {
-            Messenger.sendMessage(sender, messages.pluginDescription());
+            Messenger.sendMessage(sender, cmdMessages.pluginDescription());
             return true;
         }
 
         final var optionalWrapper = service.getWrapperForAlias(args[0]);
 
         if (optionalWrapper.isEmpty()) {
-            Messenger.sendMessage(sender, messages.invalidCommand());
+            Messenger.sendMessage(sender, cmdMessages.invalidCommand());
             return true;
         }
 
         final var wrapper = optionalWrapper.get();
 
         if (!sender.hasPermission(wrapper.permission())) {
-            Messenger.sendMessage(sender, messages.noPermission());
+            Messenger.sendMessage(sender, cmdMessages.noPermission());
             return true;
         }
 
         wrapper.command().onCommand(sender, args);
-        
+
         return true;
     }
 
@@ -70,7 +69,7 @@ public final class CustomItemManagerCommand implements TabExecutor {
 
         if (!sender.hasPermission(wrapper.permission()))
             return List.of();
-        
+
         return wrapper.command().onTabComplete(sender, args);
     }
 }

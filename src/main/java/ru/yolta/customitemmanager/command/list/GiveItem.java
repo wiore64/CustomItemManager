@@ -1,10 +1,5 @@
 package ru.yolta.customitemmanager.command.list;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -12,27 +7,44 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.permissions.Permission;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
 import org.jetbrains.annotations.Unmodifiable;
 import ru.yolta.customitemmanager.CustomItemManager;
 import ru.yolta.customitemmanager.command.SubCommand;
 import ru.yolta.customitemmanager.config.MessageConfig;
 import ru.yolta.customitemmanager.utils.Messenger;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
 public final class GiveItem implements SubCommand {
 
     private static final Set<String> ALIASES = Set.of("give");
     private static final Permission PERMISSION = new Permission("customitemmanager.command.give");
-    private final MessageConfig messages;
+    private final MessageConfig.SharedCmdSection sharedMessages;
+    private final MessageConfig.GiveItemCmdSection cmdMessages;
 
-    public GiveItem(@NotNull MessageConfig messages) {
-        this.messages = messages;
+    public GiveItem(
+            @NotNull MessageConfig.SharedCmdSection sharedMessages,
+            @NotNull MessageConfig.GiveItemCmdSection cmdMessages
+    ) {
+        this.sharedMessages = sharedMessages;
+        this.cmdMessages = cmdMessages;
+    }
+
+    public static @NotNull @Unmodifiable Set<String> getAliases() {
+        return ALIASES;
+    }
+
+    public static @NotNull Permission getPermission() {
+        return PERMISSION;
     }
 
     @Override
     public void onCommand(@NotNull CommandSender sender, @NotNull String @NotNull [] args) {
         if (args.length < 3 || args.length > 4) {
-            Messenger.sendMessage(sender, messages.invalidArguments(), Map.of("USAGE", "/cim give <player> <name> [amount]"));
+            Messenger.sendMessage(sender, sharedMessages.invalidArguments(), Map.of("USAGE", "/cim give <player> <name> [amount]"));
             return;
         }
 
@@ -40,7 +52,7 @@ public final class GiveItem implements SubCommand {
         final Player targetPlayer = Bukkit.getPlayer(targetPlayerName);
 
         if (targetPlayer == null) {
-            Messenger.sendMessage(sender, messages.playerNotFound(), Map.of("PLAYER", targetPlayerName));
+            Messenger.sendMessage(sender, cmdMessages.playerNotFound(), Map.of("PLAYER", targetPlayerName));
             return;
         }
 
@@ -48,7 +60,7 @@ public final class GiveItem implements SubCommand {
         final Optional<ItemStack> optionalItem = CustomItemManager.getApi().getCustomItem(itemName);
 
         if (optionalItem.isEmpty()) {
-            Messenger.sendMessage(sender, messages.itemNotFound(), Map.of("ITEM", itemName));
+            Messenger.sendMessage(sender, cmdMessages.itemNotFound(), Map.of("ITEM", itemName));
             return;
         }
 
@@ -60,7 +72,7 @@ public final class GiveItem implements SubCommand {
             try {
                 itemAmount = Integer.parseInt(args[3]);
             } catch (NumberFormatException e) {
-                Messenger.sendMessage(sender, messages.invalidAmount(), Map.of("AMOUNT", args[3]));
+                Messenger.sendMessage(sender, cmdMessages.invalidItemAmount(), Map.of("AMOUNT", args[3]));
                 return;
             }
         }
@@ -73,7 +85,7 @@ public final class GiveItem implements SubCommand {
             targetPlayer.getWorld().dropItemNaturally(targetPlayer.getLocation(), entry.getValue());
         }
 
-        Messenger.sendMessage(sender, messages.itemGiven(), Map.of("PLAYER", targetPlayerName, "ITEM", itemName, "AMOUNT", String.valueOf(itemAmount)));
+        Messenger.sendMessage(sender, cmdMessages.itemGiven(), Map.of("PLAYER", targetPlayerName, "ITEM", itemName, "AMOUNT", String.valueOf(itemAmount)));
     }
 
     @Override
@@ -85,13 +97,5 @@ public final class GiveItem implements SubCommand {
             return List.copyOf(CustomItemManager.getApi().getAllCustomItemIds());
 
         return List.of();
-    }
-
-    public static @NotNull @Unmodifiable Set<String> getAliases() {
-        return ALIASES;
-    }
-
-    public static @NotNull Permission getPermission() {
-        return PERMISSION;
     }
 }
