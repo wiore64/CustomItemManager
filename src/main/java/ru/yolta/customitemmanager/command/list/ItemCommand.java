@@ -81,7 +81,7 @@ public class ItemCommand implements SubCommand {
     }
 
     private void handleItemName(Player player, String[] args, ItemStack item, ItemMeta meta) {
-        if (args.length < 3 || args.length > 4) {
+        if (args.length < 3) {
             Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                     "USAGE", "\n/cim item name set <name>\n/cim item name clear")
             );
@@ -109,14 +109,14 @@ public class ItemCommand implements SubCommand {
         }
 
         if (option.equals("set")) {
-            if (args.length != 4) {
+            if (args.length < 4) {
                 Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                         "USAGE", "/cim item name set <name>")
                 );
                 return;
             }
 
-            meta.displayName(miniMessage.deserialize(args[3]));
+            meta.displayName(miniMessage.deserialize(String.join(" ", Arrays.copyOfRange(args, 3, args.length))));
             item.setItemMeta(meta);
 
             Messenger.sendMessage(player, cmdMessages.itemCmdNameUpdated());
@@ -130,20 +130,20 @@ public class ItemCommand implements SubCommand {
     }
 
     private void handleItemLore(Player player, String[] args, ItemStack item, ItemMeta meta) {
-        if (args.length < 4 || args.length > 6) {
+        if (args.length < 3) {
             Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                     "USAGE", "\n/cim item lore add <text>\n/cim item lore set <line> <text>\n/cim item lore remove <line>\n/cim item lore clear")
             );
             return;
         }
 
-        final String option = args[3]
+        final String option = args[2]
                 .strip()
                 .toLowerCase(Locale.ROOT);
 
         switch (option) {
             case "add" -> {
-                if (args.length != 5) {
+                if (args.length < 4) {
                     Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                             "USAGE", "/cim item lore add <text>"
                     ));
@@ -152,7 +152,7 @@ public class ItemCommand implements SubCommand {
 
                 final List<Component> lore = getItemLore(meta);
 
-                lore.add(miniMessage.deserialize(args[4]));
+                lore.add(miniMessage.deserialize(String.join(" ", Arrays.copyOfRange(args, 3, args.length))));
                 meta.lore(lore);
 
                 item.setItemMeta(meta);
@@ -161,7 +161,7 @@ public class ItemCommand implements SubCommand {
             }
 
             case "set" -> {
-                if (args.length != 6) {
+                if (args.length < 5) {
                     Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                             "USAGE", "/cim item lore set <line> <text>"
                     ));
@@ -171,10 +171,10 @@ public class ItemCommand implements SubCommand {
                 final int lineIndex;
 
                 try {
-                    lineIndex = Integer.parseInt(args[4].strip()) - 1;
+                    lineIndex = Integer.parseInt(args[3].strip()) - 1;
                 } catch (NumberFormatException e) {
                     Messenger.sendMessage(player, cmdMessages.itemCmdLoreBadIndex(), Map.of(
-                            "INDEX", args[4]
+                            "INDEX", args[3]
                     ));
                     return;
                 }
@@ -183,12 +183,12 @@ public class ItemCommand implements SubCommand {
 
                 if (lineIndex > lore.size()) {
                     Messenger.sendMessage(player, cmdMessages.itemCmdLoreLargeIndex(), Map.of(
-                            "INDEX", args[4], "MAX_INDEX", lore.size()
+                            "INDEX", args[3], "MAX_INDEX", lore.size()
                     ));
                     return;
                 }
 
-                lore.set(lineIndex, miniMessage.deserialize(args[5]));
+                lore.set(lineIndex, miniMessage.deserialize(String.join(" ", Arrays.copyOfRange(args, 4, args.length))));
                 meta.lore(lore);
 
                 item.setItemMeta(meta);
@@ -197,7 +197,7 @@ public class ItemCommand implements SubCommand {
             }
 
             case "remove" -> {
-                if (args.length != 5) {
+                if (args.length != 4) {
                     Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                             "USAGE", "/cim item lore remove <line>"
                     ));
@@ -207,10 +207,10 @@ public class ItemCommand implements SubCommand {
                 final int lineIndex;
 
                 try {
-                    lineIndex = Integer.parseInt(args[4].strip()) - 1;
+                    lineIndex = Integer.parseInt(args[3].strip()) - 1;
                 } catch (NumberFormatException e) {
                     Messenger.sendMessage(player, cmdMessages.itemCmdLoreBadIndex(), Map.of(
-                            "INDEX", args[4]
+                            "INDEX", args[3]
                     ));
                     return;
                 }
@@ -219,7 +219,7 @@ public class ItemCommand implements SubCommand {
 
                 if (lineIndex > lore.size()) {
                     Messenger.sendMessage(player, cmdMessages.itemCmdLoreLargeIndex(), Map.of(
-                            "INDEX", args[4]
+                            "INDEX", args[3]
                     ));
                     return;
                 }
@@ -233,7 +233,7 @@ public class ItemCommand implements SubCommand {
             }
 
             case "clear" -> {
-                if (args.length != 4) {
+                if (args.length != 3) {
                     Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
                             "USAGE", "/cim item lore clear"
                     ));
@@ -255,7 +255,7 @@ public class ItemCommand implements SubCommand {
     private void handleItemModel(Player player, String[] args, ItemStack item, ItemMeta meta) {
         if (args.length < 3 || args.length > 4) {
             Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
-                    "USAGE", "/cim item model <clear|set> [id]"
+                    "USAGE", "\n/cim item model set <id>\n/cim item model clear"
             ));
             return;
         }
@@ -308,8 +308,8 @@ public class ItemCommand implements SubCommand {
         }
 
         Messenger.sendMessage(player, sharedMessages.invalidArguments(), Map.of(
-                "USAGE", "/cim item model <clear|set> [id]")
-        );
+                "USAGE", "\n/cim item model set <id>\n/cim item model clear"
+        ));
     }
 
     private void handleItemEnchantments(Player player, String[] args, ItemStack item, ItemMeta meta) {
@@ -523,6 +523,8 @@ public class ItemCommand implements SubCommand {
         if (args.length == 3)
             return List.of("set", "clear");
 
+        // when typed set, and args length is 3, display name
+
         return List.of();
     }
 
@@ -577,7 +579,7 @@ public class ItemCommand implements SubCommand {
         if (args.length == 3)
             return List.of("set", "remove", "clear");
 
-        final String option = args[3]
+        final String option = args[2]
                 .trim()
                 .toLowerCase(Locale.ROOT);
 
